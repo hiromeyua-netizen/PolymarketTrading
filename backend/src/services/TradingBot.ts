@@ -180,7 +180,7 @@ export class TradingBot {
 
     private handlePriceChange(priceChange: { yesPrice: TokenPrice, noPrice: TokenPrice }): void {
         if (!this.firstOrder) {
-            if (priceChange.yesPrice.bestAsk < 0.1) {
+            if (priceChange.yesPrice.bestAsk < 0.05) {
                 this.firstOrder = {
                     assetId: this.marketMonitor.curMarketInfo?.yesAssetId || '',
                     side: Side.BUY,
@@ -194,7 +194,7 @@ export class TradingBot {
 
                 console.log('first order placed', this.firstOrder);
                 this.firstOrderCount++;
-            } else if (priceChange.noPrice.bestAsk < 0.1) {
+            } else if (priceChange.noPrice.bestAsk < 0.05) {
                 this.firstOrder = {
                     assetId: this.marketMonitor.curMarketInfo?.noAssetId || '',
                     side: Side.BUY,
@@ -212,7 +212,7 @@ export class TradingBot {
                 return;
             }
         } else if (!this.secondOrder) {
-            if (this.firstOrder.outcome === Outcome.UP && priceChange.yesPrice.bestBid > 0.15) {
+            if (this.firstOrder.outcome === Outcome.UP && priceChange.yesPrice.bestBid > 0.1) {
                 this.secondOrder = {
                     assetId: this.marketMonitor.curMarketInfo?.yesAssetId || '',
                     side: Side.SELL,
@@ -226,7 +226,7 @@ export class TradingBot {
 
                 console.log('second order placed', this.secondOrder);
                 this.secondOrderCount++;
-            } else if (this.firstOrder.outcome === Outcome.DOWN && priceChange.noPrice.bestBid > 0.15) {
+            } else if (this.firstOrder.outcome === Outcome.DOWN && priceChange.noPrice.bestBid > 0.1) {
                 this.secondOrder = {
                     assetId: this.marketMonitor.curMarketInfo?.noAssetId || '',
                     side: Side.SELL,

@@ -13,7 +13,9 @@
   "license": "ISC",
   "dependencies": {
     "express": "^4.18.2",
+    "mongoose": "^8.0.3",
     "node-cron": "^3.0.3",
+    "redis": "^4.6.12",
     "ws": "^8.18.3",
     "winston": "^3.18.3",
     "@polymarket/clob-client": "^4.22.8",

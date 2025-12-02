@@ -4,5 +4,13 @@ export interface Config {
     privateKey: string;
     funderAddress: string;
   };
+  redis?: {
+    host: string;
+    port: number;
+    password?: string;
+  };
+  mongodb?: {
+    uri: string;
+  };
 }
 

@@ -1,4 +1,3 @@
-// Services (business logic) will be defined here
-// Example:
-// export const tradingService = { ... }
+export { RedisService, getRedisService } from './RedisService';
+export type { TokenPrice } from './RedisService';
 

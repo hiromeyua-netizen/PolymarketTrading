@@ -6,6 +6,8 @@ import { MarketInterval, MarketMonitor, MarketMonitorEvent, MarketInfo, TokenPri
 import { OrderMessage, Outcome, TradeMessage, UserMonitor, UserMonitorEvents } from "./UserMonitor";
 import { Chain, ClobClient, Side, OrderType, OrderResponse } from "@polymarket/clob-client";
 import { Wallet } from '@ethersproject/wallet';
+import { getRedisService, TokenPrice as RedisTokenPrice } from "./RedisService";
+import TokenPriceHistory from "../models/TokenPriceHistory";
 
 interface OrderInfo {
     assetId: string;
@@ -26,6 +28,8 @@ export class TradingBot {
     private secondOrder: OrderInfo | null = null;
     private firstOrderCount: number = 0;
     private secondOrderCount: number = 0;
+    private redisService = getRedisService();
+    private currentSlug: string | null = null;
 
     constructor(symbol: CoinSymbol, marketInterval: MarketInterval) {
         this.userMonitor = new UserMonitor();
@@ -34,8 +38,21 @@ export class TradingBot {
     }
 
     public async start(): Promise<void> {
+        // Connect to Redis
+        try {
+            await this.redisService.connect();
+        } catch (error) {
+            logger.error('Failed to connect to Redis:', error);
+            throw error;
+        }
+
         await this.marketMonitor.start();
         await this.userMonitor.connect();
+
+        // Initialize current slug from initial market info
+        if (this.marketMonitor.curMarketInfo) {
+            this.currentSlug = this.marketMonitor.curMarketInfo.slug;
+        }
 
         this.marketMonitor.on(MarketMonitorEvent.PRICE_CHANGE, (priceChange: { yesPrice: TokenPrice, noPrice: TokenPrice }) => {
             this.handlePriceChange(priceChange);
@@ -178,80 +195,76 @@ export class TradingBot {
         }
     }
 
-    private handlePriceChange(priceChange: { yesPrice: TokenPrice, noPrice: TokenPrice }): void {
-        if (!this.firstOrder) {
-            if (priceChange.yesPrice.bestAsk < 0.05) {
-                this.firstOrder = {
-                    assetId: this.marketMonitor.curMarketInfo?.yesAssetId || '',
-                    side: Side.BUY,
-                    outcome: Outcome.UP,
-                    price: priceChange.yesPrice.bestAsk,
-                    size: 100,
-                    amount: priceChange.yesPrice.bestAsk * 100,
-                    sizeMatched: 0,
-                    isMarketOrder: false,
-                };
+    private async handlePriceChange(priceChange: { yesPrice: TokenPrice, noPrice: TokenPrice }): Promise<void> {
+        const marketInfo = this.marketMonitor.curMarketInfo;
+        if (!marketInfo) {
+            logger.warn('Cannot save price: market info not available');
+            return;
+        }
 
-                console.log('first order placed', this.firstOrder);
-                this.firstOrderCount++;
-            } else if (priceChange.noPrice.bestAsk < 0.05) {
-                this.firstOrder = {
-                    assetId: this.marketMonitor.curMarketInfo?.noAssetId || '',
-                    side: Side.BUY,
-                    outcome: Outcome.DOWN,
-                    price: priceChange.noPrice.bestAsk,
-                    size: 100,
-                    amount: priceChange.noPrice.bestAsk * 100,
-                    sizeMatched: 0,
-                    isMarketOrder: false,
-                };
+        // Update current slug
+        this.currentSlug = marketInfo.slug;
 
-                console.log('first order placed', this.firstOrder);
-                this.firstOrderCount++;
-            } else {
-                return;
-            }
-        } else if (!this.secondOrder) {
-            if (this.firstOrder.outcome === Outcome.UP && priceChange.yesPrice.bestBid > 0.1) {
-                this.secondOrder = {
-                    assetId: this.marketMonitor.curMarketInfo?.yesAssetId || '',
-                    side: Side.SELL,
-                    outcome: Outcome.UP,
-                    price: priceChange.yesPrice.bestAsk,
-                    size: 100,
-                    amount: priceChange.yesPrice.bestAsk * 100,
-                    sizeMatched: 0,
-                    isMarketOrder: false,
-                };
+        try {
+            const timestamp = Date.now();
+            const redisPrice: RedisTokenPrice = {
+                slug: marketInfo.slug,
+                timestamp: timestamp,
+                upTokenPrice: priceChange.yesPrice.bestAsk,
+                downTokenPrice: priceChange.noPrice.bestAsk,
+            };
 
-                console.log('second order placed', this.secondOrder);
-                this.secondOrderCount++;
-            } else if (this.firstOrder.outcome === Outcome.DOWN && priceChange.noPrice.bestBid > 0.1) {
-                this.secondOrder = {
-                    assetId: this.marketMonitor.curMarketInfo?.noAssetId || '',
-                    side: Side.SELL,
-                    outcome: Outcome.DOWN,
-                    price: priceChange.noPrice.bestAsk,
-                    size: 100,
-                    amount: priceChange.noPrice.bestAsk * 100,
-                    sizeMatched: 0,
-                    isMarketOrder: false,
-                };
-
-                console.log('second order placed', this.secondOrder);
-                this.secondOrderCount++;
-            } else {
-                return;
-            }
+            // Save to Redis (both with timestamp and as latest)
+            await this.redisService.saveTokenPrice(redisPrice);
+            await this.redisService.saveLatestTokenPrice(redisPrice);
+        } catch (error) {
+            logger.error('Error saving token price to Redis:', error);
         }
     }
 
     private handleCoinPriceBiasChange(coinPriceBias: number): void {
     }
 
-    private handleMarketUpdated(marketInfo: MarketInfo): void {
+    private async handleMarketUpdated(marketInfo: MarketInfo): Promise<void> {
         logger.info(`first order count: ${this.firstOrderCount}, second order count: ${this.secondOrderCount}`);
         logger.info(`Market updated: ${marketInfo.question}`);
+        
+        // Get the previous market slug (before it was updated)
+        const previousSlug = this.currentSlug;
+
+        if (previousSlug) {
+            try {
+                // Get all token prices from Redis for the previous market
+                const tokenPrices = await this.redisService.getTokenPricesBySlug(previousSlug);
+                
+                if (tokenPrices.length > 0) {
+                    logger.info(`Saving ${tokenPrices.length} token prices to MongoDB for slug: ${previousSlug}`);
+                    
+                    // Batch save to MongoDB
+                    const documents = tokenPrices.map(price => ({
+                        slug: price.slug,
+                        timestamp: new Date(price.timestamp),
+                        upTokenPrice: price.upTokenPrice,
+                        downTokenPrice: price.downTokenPrice,
+                    }));
+
+                    await TokenPriceHistory.insertMany(documents);
+                    logger.info(`✅ Successfully saved ${documents.length} token prices to MongoDB`);
+
+                    // Delete all token prices from Redis for the previous market
+                    await this.redisService.deleteTokenPricesBySlug(previousSlug);
+                    logger.info(`✅ Cleared Redis data for slug: ${previousSlug}`);
+                } else {
+                    logger.info(`No token prices found in Redis for slug: ${previousSlug}`);
+                }
+            } catch (error) {
+                logger.error('Error saving Redis data to MongoDB:', error);
+            }
+        }
+
+        // Update current slug to the new market
+        this.currentSlug = marketInfo.slug;
+
         this.firstOrder = null;
         this.secondOrder = null;
     }

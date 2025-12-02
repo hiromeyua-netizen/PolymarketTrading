@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { getPriceHistoryBySlug, getLatestPriceBySlug, getAllSlugs } from '../controllers/priceHistoryController';
 
 const router = Router();
 
@@ -18,6 +19,11 @@ router.get('/health', (req: Request, res: Response) => {
     timestamp: new Date().toISOString(),
   });
 });
+
+// Price history routes
+router.get('/api/slugs', getAllSlugs);
+router.get('/api/price-history/:slug', getPriceHistoryBySlug);
+router.get('/api/price-history/:slug/latest', getLatestPriceBySlug);
 
 export default router;
 

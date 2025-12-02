@@ -24,8 +24,8 @@ export class TradingBot {
     private clobClient: ClobClient | null = null;
     private firstOrder: OrderInfo | null = null;
     private secondOrder: OrderInfo | null = null;
-    private totalEvents: number = 0;
-    private totalSuccessfulEvents: number = 0;
+    private firstOrderCount: number = 0;
+    private secondOrderCount: number = 0;
 
     constructor(symbol: CoinSymbol, marketInterval: MarketInterval) {
         this.userMonitor = new UserMonitor();
@@ -193,6 +193,7 @@ export class TradingBot {
                 };
 
                 console.log('first order placed', this.firstOrder);
+                this.firstOrderCount++;
             } else if (priceChange.noPrice.bestAsk < 0.1) {
                 this.firstOrder = {
                     assetId: this.marketMonitor.curMarketInfo?.noAssetId || '',
@@ -206,6 +207,7 @@ export class TradingBot {
                 };
 
                 console.log('first order placed', this.firstOrder);
+                this.firstOrderCount++;
             } else {
                 return;
             }
@@ -223,7 +225,7 @@ export class TradingBot {
                 };
 
                 console.log('second order placed', this.secondOrder);
-                this.totalSuccessfulEvents++;
+                this.secondOrderCount++;
             } else if (this.firstOrder.outcome === Outcome.DOWN && priceChange.noPrice.bestBid > 0.15) {
                 this.secondOrder = {
                     assetId: this.marketMonitor.curMarketInfo?.noAssetId || '',
@@ -237,7 +239,7 @@ export class TradingBot {
                 };
 
                 console.log('second order placed', this.secondOrder);
-                this.totalSuccessfulEvents++;
+                this.secondOrderCount++;
             } else {
                 return;
             }
@@ -248,8 +250,7 @@ export class TradingBot {
     }
 
     private handleMarketUpdated(marketInfo: MarketInfo): void {
-        this.totalEvents++;
-        logger.info(`total events: ${this.totalEvents}, total successful events: ${this.totalSuccessfulEvents}`);
+        logger.info(`first order count: ${this.firstOrderCount}, second order count: ${this.secondOrderCount}`);
         logger.info(`Market updated: ${marketInfo.question}`);
         this.firstOrder = null;
         this.secondOrder = null;

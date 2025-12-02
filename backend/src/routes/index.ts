@@ -3,15 +3,6 @@ import { getPriceHistoryBySlug, getLatestPriceBySlug, getAllSlugs } from '../con
 
 const router = Router();
 
-// Health check route
-router.get('/', (req: Request, res: Response) => {
-  res.json({
-    message: 'Polymarket Trading Bot API',
-    status: 'running',
-    timestamp: new Date().toISOString(),
-  });
-});
-
 // Health check endpoint
 router.get('/health', (req: Request, res: Response) => {
   res.json({
@@ -21,9 +12,9 @@ router.get('/health', (req: Request, res: Response) => {
 });
 
 // Price history routes
-router.get('/api/slugs', getAllSlugs);
-router.get('/api/price-history/:slug', getPriceHistoryBySlug);
-router.get('/api/price-history/:slug/latest', getLatestPriceBySlug);
+router.get('/slugs', getAllSlugs);
+router.get('/price-history/:slug', getPriceHistoryBySlug);
+router.get('/price-history/:slug/latest', getLatestPriceBySlug);
 
 export default router;
 

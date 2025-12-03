@@ -36,6 +36,13 @@
   opacity: 0.9;
 }
 
+.telegram-contact {
+  margin-top: 10px;
+  font-size: 0.9rem;
+  opacity: 0.85;
+  font-weight: 500;
+}
+
 .content {
   padding: 20px 30px;
   flex: 1;

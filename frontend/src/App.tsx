@@ -61,6 +61,7 @@ function App() {
         <header className="header">
           <h1>Polymarket Trading Bot</h1>
           <p>Price History Dashboard</p>
+          <p> Hi, I am Trong Truong Pham from freelancer.com. Please contact me with the following telegram username: @ttp_trading</p>
         </header>
 
         <div className="content">

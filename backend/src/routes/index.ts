@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { getPriceHistoryBySlug, getLatestPriceBySlug, getAllSlugs } from '../controllers/priceHistoryController';
+import { calculateStrategy } from '../controllers/strategyController';
 
 const router = Router();
 
@@ -15,6 +16,9 @@ router.get('/health', (req: Request, res: Response) => {
 router.get('/slugs', getAllSlugs);
 router.get('/price-history/:slug', getPriceHistoryBySlug);
 router.get('/price-history/:slug/latest', getLatestPriceBySlug);
+
+// Strategy calculation route
+router.get('/strategy/calculate', calculateStrategy);
 
 export default router;
 

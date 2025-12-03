@@ -4,6 +4,7 @@ import { logger } from '../utils/logger';
 
 interface StrategyResult {
   slug: string;
+  winningToken: 'up' | 'down' | 'none';
   entryPrice: number;
   entryTimestamp: Date;
   exitPrice?: number;
@@ -51,24 +52,41 @@ export const calculateStrategy = async (req: Request, res: Response): Promise<vo
         continue;
       }
 
-      // Find first entry point (first price > 0.80)
+      // Find which token first reaches > 0.80 (winning token)
       let entryIndex = -1;
       let entryPrice = 0;
       let entryTimestamp: Date | null = null;
+      let winningToken: 'up' | 'down' | 'none' = 'none';
 
+      // Check both UP and DOWN tokens to find which one first reaches > 0.80
       for (let i = 0; i < priceHistory.length; i++) {
-        if (priceHistory[i].upTokenPrice > entryThreshold) {
+        const upPrice = priceHistory[i].upTokenPrice;
+        const downPrice = priceHistory[i].downTokenPrice;
+
+        // Check if UP token reaches > 0.80 first
+        if (upPrice > entryThreshold) {
           entryIndex = i;
-          entryPrice = priceHistory[i].upTokenPrice;
+          entryPrice = upPrice;
           entryTimestamp = priceHistory[i].timestamp;
+          winningToken = 'up';
+          break;
+        }
+
+        // Check if DOWN token reaches > 0.80 first
+        if (downPrice > entryThreshold) {
+          entryIndex = i;
+          entryPrice = downPrice;
+          entryTimestamp = priceHistory[i].timestamp;
+          winningToken = 'down';
           break;
         }
       }
 
       // If no entry point found, mark as no_entry
-      if (entryIndex === -1) {
+      if (entryIndex === -1 || winningToken === 'none') {
         results.push({
           slug,
+          winningToken: 'none',
           entryPrice: 0,
           entryTimestamp: priceHistory[0].timestamp,
           outcome: 'no_entry',
@@ -78,15 +96,19 @@ export const calculateStrategy = async (req: Request, res: Response): Promise<vo
         continue;
       }
 
-      // Check if price drops below 0.50 after entry
+      // Check if the winning token price drops below 0.50 after entry
       let exitPrice: number | undefined;
       let exitTimestamp: Date | undefined;
       let isLoss = false;
 
       for (let i = entryIndex + 1; i < priceHistory.length; i++) {
-        if (priceHistory[i].upTokenPrice < exitThreshold) {
+        const currentPrice = winningToken === 'up' 
+          ? priceHistory[i].upTokenPrice 
+          : priceHistory[i].downTokenPrice;
+
+        if (currentPrice < exitThreshold) {
           isLoss = true;
-          exitPrice = priceHistory[i].upTokenPrice;
+          exitPrice = currentPrice;
           exitTimestamp = priceHistory[i].timestamp;
           break;
         }
@@ -98,6 +120,7 @@ export const calculateStrategy = async (req: Request, res: Response): Promise<vo
 
       results.push({
         slug,
+        winningToken,
         entryPrice,
         entryTimestamp: entryTimestamp!,
         exitPrice,

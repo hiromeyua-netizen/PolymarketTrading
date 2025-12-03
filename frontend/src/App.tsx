@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import SlugSelector from './components/SlugSelector'
 import PriceChart from './components/PriceChart'
+import InfoModal from './components/InfoModal'
 import { fetchAllSlugs, fetchPriceHistory } from './services/api'
 import './App.css'
 
@@ -18,6 +19,7 @@ function App() {
   const [priceData, setPriceData] = useState<PriceData[]>([])
   const [loading, setLoading] = useState<boolean>(false)
   const [error, setError] = useState<string | null>(null)
+  const [showModal, setShowModal] = useState<boolean>(true)
 
   useEffect(() => {
     loadSlugs()
@@ -57,6 +59,8 @@ function App() {
 
   return (
     <div className="app">
+      {showModal && <InfoModal onClose={() => setShowModal(false)} />}
+      
       <div className="container">
         <header className="header">
           <h1>Polymarket Trading Bot</h1>

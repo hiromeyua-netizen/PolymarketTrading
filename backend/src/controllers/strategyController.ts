@@ -9,6 +9,10 @@ interface StrategyResult {
   entryTimestamp: Date;
   exitPrice?: number;
   exitTimestamp?: Date;
+  eventualWinner: 'up' | 'down' | 'none';
+  finalUpPrice: number;
+  finalDownPrice: number;
+  stopLossTriggered: boolean;
   outcome: 'win' | 'loss' | 'no_entry';
   profit: number;
 }
@@ -124,11 +128,20 @@ export const calculateStrategy = async (req: Request, res: Response): Promise<vo
 
       // If no entry point found, mark as no_entry
       if (entryIndex === -1 || winningToken === 'none') {
+        const lastPrice = priceHistory[priceHistory.length - 1];
+        const finalUpPrice = lastPrice.upTokenPrice;
+        const finalDownPrice = lastPrice.downTokenPrice;
+        const eventualWinner: 'up' | 'down' = finalUpPrice > finalDownPrice ? 'up' : 'down';
+        
         results.push({
           slug,
           winningToken: 'none',
           entryPrice: 0,
           entryTimestamp: priceHistory[0].timestamp,
+          eventualWinner,
+          finalUpPrice,
+          finalDownPrice,
+          stopLossTriggered: false,
           outcome: 'no_entry',
           profit: 0,
         });
@@ -136,10 +149,10 @@ export const calculateStrategy = async (req: Request, res: Response): Promise<vo
         continue;
       }
 
-      // Check if the winning token price drops below 0.50 after entry
+      // Check if the winning token price drops below exitThreshold after entry (stop loss)
       let exitPrice: number | undefined;
       let exitTimestamp: Date | undefined;
-      let isLoss = false;
+      let stopLossTriggered = false;
 
       for (let i = entryIndex + 1; i < priceHistory.length; i++) {
         const currentPrice = winningToken === 'up' 
@@ -147,16 +160,41 @@ export const calculateStrategy = async (req: Request, res: Response): Promise<vo
           : priceHistory[i].downTokenPrice;
 
         if (currentPrice < exitThreshold) {
-          isLoss = true;
+          stopLossTriggered = true;
           exitPrice = currentPrice;
           exitTimestamp = priceHistory[i].timestamp;
           break;
         }
       }
 
-      // Determine outcome and profit
-      const outcome: 'win' | 'loss' = isLoss ? 'loss' : 'win';
-      const profit = isLoss ? lossAmount : profitAmount;
+      // Determine eventual winner by checking final prices
+      const lastPrice = priceHistory[priceHistory.length - 1];
+      const finalUpPrice = lastPrice.upTokenPrice;
+      const finalDownPrice = lastPrice.downTokenPrice;
+      
+      // The eventual winner is the token with higher final price
+      const eventualWinner: 'up' | 'down' = finalUpPrice > finalDownPrice ? 'up' : 'down';
+      
+      // Determine outcome based on whether we hit stop loss or if our token eventually won
+      let outcome: 'win' | 'loss';
+      let profit: number;
+      
+      if (stopLossTriggered) {
+        // Stop loss was triggered - we lost
+        outcome = 'loss';
+        profit = lossAmount;
+      } else {
+        // No stop loss - check if our bought token eventually won
+        if (winningToken === eventualWinner) {
+          // Our token won - we profit
+          outcome = 'win';
+          profit = profitAmount;
+        } else {
+          // Our token lost - we lose
+          outcome = 'loss';
+          profit = lossAmount;
+        }
+      }
 
       results.push({
         slug,
@@ -165,12 +203,16 @@ export const calculateStrategy = async (req: Request, res: Response): Promise<vo
         entryTimestamp: entryTimestamp!,
         exitPrice,
         exitTimestamp,
+        eventualWinner,
+        finalUpPrice,
+        finalDownPrice,
+        stopLossTriggered,
         outcome,
         profit,
       });
 
       totalProfit += profit;
-      if (isLoss) {
+      if (outcome === 'loss') {
         losses++;
       } else {
         wins++;

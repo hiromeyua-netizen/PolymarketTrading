@@ -27,10 +27,50 @@ interface StrategyStats {
 
 export const calculateStrategy = async (req: Request, res: Response): Promise<void> => {
   try {
-    const entryThreshold = 0.80; // Buy if price > 0.80
-    const exitThreshold = 0.50; // Sell if price < 0.50
-    const profitAmount = 0.20; // Earn $0.20 if win
-    const lossAmount = -0.30; // Lose $0.30 if loss
+    // Get thresholds from request parameters
+    const entryThresholdParam = req.query.entryThreshold || req.query.entry;
+    const exitThresholdParam = req.query.exitThreshold || req.query.exit;
+
+    if (!entryThresholdParam || !exitThresholdParam) {
+      res.status(400).json({ 
+        error: 'Missing required parameters',
+        message: 'Please provide entryThreshold and exitThreshold as query parameters'
+      });
+      return;
+    }
+
+    const entryThreshold = parseFloat(entryThresholdParam as string);
+    const exitThreshold = parseFloat(exitThresholdParam as string);
+
+    if (isNaN(entryThreshold) || isNaN(exitThreshold)) {
+      res.status(400).json({ 
+        error: 'Invalid parameters',
+        message: 'entryThreshold and exitThreshold must be valid numbers'
+      });
+      return;
+    }
+
+    if (entryThreshold <= 0 || entryThreshold >= 1 || exitThreshold <= 0 || exitThreshold >= 1) {
+      res.status(400).json({ 
+        error: 'Invalid threshold values',
+        message: 'Thresholds must be between 0 and 1'
+      });
+      return;
+    }
+
+    if (entryThreshold <= exitThreshold) {
+      res.status(400).json({ 
+        error: 'Invalid threshold values',
+        message: 'entryThreshold must be greater than exitThreshold'
+      });
+      return;
+    }
+
+    // Calculate profit and loss amounts based on thresholds
+    // Loss: difference between entry and exit thresholds (e.g., 0.80 - 0.50 = 0.30)
+    const lossAmount = -(entryThreshold - exitThreshold);
+    // Profit: difference between max price (1.0) and entry threshold (e.g., 1.0 - 0.80 = 0.20)
+    const profitAmount = 1.0 - entryThreshold;
 
     // Get all slugs
     const slugs = await TokenPriceHistory.distinct('slug');

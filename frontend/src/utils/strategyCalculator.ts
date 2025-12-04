@@ -57,12 +57,11 @@ interface GridLevelState {
  * End calculation: for gridGap <= 3, end = 99, otherwise end = 100 - gridGap
  */
 function getGridLevels(gridGap: number, maxTotalCost: number = 97): number[] {
-  const startLevel = gridGap
+  const startLevel = gridGap + 50
   const endLevel = maxTotalCost
-  console.log({ startLevel, endLevel })
   const levels: number[] = []
   
-  for (let level = startLevel; level <= 50; level += gridGap) {
+  for (let level = startLevel; level <= endLevel; level += gridGap) {
     levels.push(level)
   }
   

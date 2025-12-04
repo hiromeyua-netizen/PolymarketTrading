@@ -2,221 +2,404 @@ import { Request, Response } from 'express';
 import TokenPriceHistory from '../models/TokenPriceHistory';
 import { logger } from '../utils/logger';
 
-interface StrategyResult {
-  slug: string;
-  winningToken: 'up' | 'down' | 'none';
+// Grid levels: 55c, 60c, 65c, 70c, 75c, 80c, 85c, 90c, 95c
+const GRID_LEVELS = [0.55, 0.60, 0.65, 0.70, 0.75, 0.80, 0.85, 0.90, 0.95];
+
+interface GridLevelState {
+  level: number;
+  hasEntry: boolean;
+  hedgeFilled: boolean;
   entryPrice: number;
+  hedgePrice: number;
+  tokenType: 'up' | 'down' | null;
+  entryTimestamp: Date | null;
+  hedgeFilledTimestamp: Date | null;
+  positionCount: number; // Number of contracts at this level
+}
+
+interface Position {
+  gridLevel: number;
+  tokenType: 'up' | 'down';
+  entryPrice: number;
+  hedgePrice: number;
+  hedgeFilled: boolean;
+  orderSize: number;
   entryTimestamp: Date;
-  exitPrice?: number;
-  exitTimestamp?: Date;
-  outcome: 'win' | 'loss' | 'no_entry';
-  profit: number;
+  hedgeFilledTimestamp?: Date;
 }
 
-interface StrategyStats {
-  totalSlugs: number;
-  totalTrades: number;
-  wins: number;
-  losses: number;
-  noEntries: number;
-  winRate: number;
-  totalProfit: number;
-  averageProfitPerTrade: number;
-  results: StrategyResult[];
+/**
+ * Calculate hedge price for a given entry price
+ * Pattern: 55c → 42c, 60c → 37c
+ * Formula: hedge = 1.0 - entryPrice - 0.03
+ */
+function calculateHedgePrice(entryPrice: number): number {
+  return Math.max(0, 1.0 - entryPrice - 0.03);
 }
 
+/**
+ * Check if price crosses a grid level from below (ascending)
+ */
+function crossesLevelFromBelow(previousPrice: number, currentPrice: number, level: number): boolean {
+  return previousPrice < level && currentPrice >= level;
+}
+
+/**
+ * Check if price reaches or crosses a target price
+ */
+function reachesPrice(previousPrice: number, currentPrice: number, targetPrice: number): boolean {
+  return (previousPrice < targetPrice && currentPrice >= targetPrice) ||
+         (previousPrice > targetPrice && currentPrice <= targetPrice);
+}
+
+/**
+ * Grid Hedge Strategy Calculator
+ * 
+ * @param priceHistory - Array of token price history sorted by timestamp
+ * @param orderSize - Size for each order in one event
+ * @returns Total profit from the strategy
+ */
+export function calculateGridHedgeStrategy(
+  priceHistory: Array<{
+    timestamp: Date;
+    upTokenPrice: number;
+    downTokenPrice: number;
+  }>,
+  orderSize: number
+): number {
+  if (priceHistory.length === 0) {
+    return 0;
+  }
+
+  // Track state for each grid level for both UP and DOWN tokens
+  const upGridStates: Map<number, GridLevelState> = new Map();
+  const downGridStates: Map<number, GridLevelState> = new Map();
+
+  // Initialize grid states
+  GRID_LEVELS.forEach(level => {
+    upGridStates.set(level, {
+      level,
+      hasEntry: false,
+      hedgeFilled: false,
+      entryPrice: level,
+      hedgePrice: calculateHedgePrice(level),
+      tokenType: 'up',
+      entryTimestamp: null,
+      hedgeFilledTimestamp: null,
+      positionCount: 0,
+    });
+    downGridStates.set(level, {
+      level,
+      hasEntry: false,
+      hedgeFilled: false,
+      entryPrice: level,
+      hedgePrice: calculateHedgePrice(level),
+      tokenType: 'down',
+      entryTimestamp: null,
+      hedgeFilledTimestamp: null,
+      positionCount: 0,
+    });
+  });
+
+  // Track all positions for profit calculation
+  const positions: Position[] = [];
+
+  // Process price history chronologically
+  for (let i = 0; i < priceHistory.length; i++) {
+    const current = priceHistory[i];
+    const previous = i > 0 ? priceHistory[i - 1] : current;
+
+    const upPrice = current.upTokenPrice;
+    const downPrice = current.downTokenPrice;
+    const prevUpPrice = previous.upTokenPrice;
+    const prevDownPrice = previous.downTokenPrice;
+
+    // Process UP token grid crossings
+    for (const level of GRID_LEVELS) {
+      const state = upGridStates.get(level)!;
+
+      // Check if UP token crosses this level from below
+      if (crossesLevelFromBelow(prevUpPrice, upPrice, level)) {
+        // Check if we should place an entry:
+        // 1. No entry yet, OR
+        // 2. Hedge was already filled (re-entry condition)
+        if (!state.hasEntry || state.hedgeFilled) {
+          // Place entry order on UP token at this level
+          state.hasEntry = true;
+          state.entryTimestamp = current.timestamp;
+          state.positionCount += orderSize;
+
+          // Create position
+          positions.push({
+            gridLevel: level,
+            tokenType: 'up',
+            entryPrice: level,
+            hedgePrice: state.hedgePrice,
+            hedgeFilled: false,
+            orderSize: orderSize,
+            entryTimestamp: current.timestamp,
+          });
+
+          // Reset hedge filled flag for re-entry (new position needs new hedge)
+          state.hedgeFilled = false;
+        }
+      }
+
+      // Check if DOWN token reaches the hedge price for this UP entry
+      if (state.hasEntry && !state.hedgeFilled) {
+        if (reachesPrice(prevDownPrice, downPrice, state.hedgePrice)) {
+          state.hedgeFilled = true;
+          state.hedgeFilledTimestamp = current.timestamp;
+
+          // Update the most recent position at this level
+          const recentPositions = positions.filter(p => 
+            p.gridLevel === level && 
+            p.tokenType === 'up' && 
+            !p.hedgeFilled
+          );
+          if (recentPositions.length > 0) {
+            const latestPosition = recentPositions[recentPositions.length - 1];
+            latestPosition.hedgeFilled = true;
+            latestPosition.hedgeFilledTimestamp = current.timestamp;
+          }
+        }
+      }
+    }
+
+    // Process DOWN token grid crossings
+    for (const level of GRID_LEVELS) {
+      const state = downGridStates.get(level)!;
+
+      // Check if DOWN token crosses this level from below
+      if (crossesLevelFromBelow(prevDownPrice, downPrice, level)) {
+        // Check if we should place an entry:
+        // 1. No entry yet, OR
+        // 2. Hedge was already filled (re-entry condition)
+        if (!state.hasEntry || state.hedgeFilled) {
+          // Place entry order on DOWN token at this level
+          state.hasEntry = true;
+          state.entryTimestamp = current.timestamp;
+          state.positionCount += orderSize;
+
+          // Create position
+          positions.push({
+            gridLevel: level,
+            tokenType: 'down',
+            entryPrice: level,
+            hedgePrice: state.hedgePrice,
+            hedgeFilled: false,
+            orderSize: orderSize,
+            entryTimestamp: current.timestamp,
+          });
+
+          // Reset hedge filled flag for re-entry (new position needs new hedge)
+          state.hedgeFilled = false;
+        }
+      }
+
+      // Check if UP token reaches the hedge price for this DOWN entry
+      if (state.hasEntry && !state.hedgeFilled) {
+        if (reachesPrice(prevUpPrice, upPrice, state.hedgePrice)) {
+          state.hedgeFilled = true;
+          state.hedgeFilledTimestamp = current.timestamp;
+
+          // Update the most recent position at this level
+          const recentPositions = positions.filter(p => 
+            p.gridLevel === level && 
+            p.tokenType === 'down' && 
+            !p.hedgeFilled
+          );
+          if (recentPositions.length > 0) {
+            const latestPosition = recentPositions[recentPositions.length - 1];
+            latestPosition.hedgeFilled = true;
+            latestPosition.hedgeFilledTimestamp = current.timestamp;
+          }
+        }
+      }
+    }
+  }
+
+  // Calculate final profit
+  // Get the final prices to determine outcomes
+  const finalPrice = priceHistory[priceHistory.length - 1];
+  const finalUpPrice = finalPrice.upTokenPrice;
+  const finalDownPrice = finalPrice.downTokenPrice;
+
+  let totalProfit = 0;
+
+  for (const position of positions) {
+    if (position.tokenType === 'up') {
+      // UP token position
+      if (position.hedgeFilled) {
+        // Hedge was filled - position is protected
+        // Profit = (hedgePrice - entryPrice) * orderSize
+        // If UP wins (final price = 1.0), we get full profit
+        // If DOWN wins (final price = 0.0), hedge protects us
+        const profit = (position.hedgePrice - position.entryPrice) * position.orderSize;
+        totalProfit += profit;
+      } else {
+        // No hedge - exposed position
+        // If UP wins: profit = (1.0 - entryPrice) * orderSize
+        // If DOWN wins: loss = (0.0 - entryPrice) * orderSize = -entryPrice * orderSize
+        if (finalUpPrice > finalDownPrice) {
+          // UP is winning
+          const profit = (1.0 - position.entryPrice) * position.orderSize;
+          totalProfit += profit;
+        } else {
+          // DOWN is winning - loss
+          const loss = -position.entryPrice * position.orderSize;
+          totalProfit += loss;
+        }
+      }
+    } else {
+      // DOWN token position
+      if (position.hedgeFilled) {
+        // Hedge was filled - position is protected
+        // Profit = (hedgePrice - entryPrice) * orderSize
+        const profit = (position.hedgePrice - position.entryPrice) * position.orderSize;
+        totalProfit += profit;
+      } else {
+        // No hedge - exposed position
+        // If DOWN wins: profit = (1.0 - entryPrice) * orderSize
+        // If UP wins: loss = (0.0 - entryPrice) * orderSize = -entryPrice * orderSize
+        if (finalDownPrice > finalUpPrice) {
+          // DOWN is winning
+          const profit = (1.0 - position.entryPrice) * position.orderSize;
+          totalProfit += profit;
+        } else {
+          // UP is winning - loss
+          const loss = -position.entryPrice * position.orderSize;
+          totalProfit += loss;
+        }
+      }
+    }
+  }
+
+  return totalProfit;
+}
+
+/**
+ * API endpoint for calculating Grid Hedge Strategy
+ */
 export const calculateStrategy = async (req: Request, res: Response): Promise<void> => {
   try {
-    // Get thresholds from request parameters
-    const entryThresholdParam = req.query.entryThreshold || req.query.entry;
-    const exitThresholdParam = req.query.exitThreshold || req.query.exit;
-
-    if (!entryThresholdParam || !exitThresholdParam) {
+    // Get orderSize from request parameters
+    const orderSizeParam = req.query.orderSize || req.query.size;
+    
+    if (!orderSizeParam) {
       res.status(400).json({ 
-        error: 'Missing required parameters',
-        message: 'Please provide entryThreshold and exitThreshold as query parameters'
+        error: 'Missing required parameter',
+        message: 'Please provide orderSize as a query parameter'
       });
       return;
     }
 
-    const entryThreshold = parseFloat(entryThresholdParam as string);
-    const exitThreshold = parseFloat(exitThresholdParam as string);
+    const orderSize = parseFloat(orderSizeParam as string);
 
-    if (isNaN(entryThreshold) || isNaN(exitThreshold)) {
+    if (isNaN(orderSize) || orderSize <= 0) {
       res.status(400).json({ 
-        error: 'Invalid parameters',
-        message: 'entryThreshold and exitThreshold must be valid numbers'
+        error: 'Invalid parameter',
+        message: 'orderSize must be a positive number'
       });
       return;
     }
 
-    if (entryThreshold <= 0 || entryThreshold >= 1 || exitThreshold <= 0 || exitThreshold >= 1) {
-      res.status(400).json({ 
-        error: 'Invalid threshold values',
-        message: 'Thresholds must be between 0 and 1'
-      });
-      return;
-    }
-
-    if (entryThreshold <= exitThreshold) {
-      res.status(400).json({ 
-        error: 'Invalid threshold values',
-        message: 'entryThreshold must be greater than exitThreshold'
-      });
-      return;
-    }
-
-    // Get hours parameter (default 24 hours)
-    const hoursParam = req.query.hours;
-    const hours = hoursParam ? parseFloat(hoursParam as string) : 24;
-
-    if (isNaN(hours) || hours <= 0) {
-      res.status(400).json({ 
-        error: 'Invalid hours parameter',
-        message: 'hours must be a positive number'
-      });
-      return;
-    }
-
-    // Calculate cutoff time (current time - hours)
-    const cutoffTime = new Date(Date.now() - hours * 60 * 60 * 1000);
-
-    // Calculate profit and loss amounts based on thresholds
-    // Loss: difference between entry and exit thresholds (e.g., 0.80 - 0.50 = 0.30)
-    const lossAmount = -(entryThreshold - exitThreshold);
-    // Profit: difference between max price (1.0) and entry threshold (e.g., 1.0 - 0.80 = 0.20)
-    const profitAmount = 1.0 - entryThreshold;
-
-    // Get slugs that have data within the time window
-    const slugs = await TokenPriceHistory.distinct('slug', {
-      timestamp: { $gte: cutoffTime }
-    });
-
-    const results: StrategyResult[] = [];
-    let totalProfit = 0;
-    let wins = 0;
-    let losses = 0;
-    let noEntries = 0;
-
-    // Process each slug
-    for (const slug of slugs) {
-      // Get price history for this slug within the time window, sorted by timestamp
-      const priceHistory = await TokenPriceHistory.find({ 
-        slug,
-        timestamp: { $gte: cutoffTime }
-      })
+    // Get optional slug parameter to filter by specific market
+    const slugParam = req.query.slug;
+    
+    if (slugParam) {
+      // Calculate profit for specific slug
+      const priceHistory = await TokenPriceHistory.find({ slug: slugParam as string })
         .sort({ timestamp: 1 })
         .exec();
 
       if (priceHistory.length === 0) {
-        continue;
+        res.status(404).json({ 
+          error: 'No price data found',
+          message: `No price data found for slug: ${slugParam}`
+        });
+        return;
       }
 
-      // Find which token first reaches > 0.80 (winning token)
-      let entryIndex = -1;
-      let entryPrice = 0;
-      let entryTimestamp: Date | null = null;
-      let winningToken: 'up' | 'down' | 'none' = 'none';
+      // Convert to format expected by strategy calculator
+      const priceData = priceHistory.map(item => ({
+        timestamp: item.timestamp,
+        upTokenPrice: item.upTokenPrice,
+        downTokenPrice: item.downTokenPrice,
+      }));
 
-      // Check both UP and DOWN tokens to find which one first reaches > 0.80
-      for (let i = 0; i < priceHistory.length; i++) {
-        const upPrice = priceHistory[i].upTokenPrice;
-        const downPrice = priceHistory[i].downTokenPrice;
+      // Calculate profit using Grid Hedge Strategy
+      const profit = calculateGridHedgeStrategy(priceData, orderSize);
 
-        // Check if UP token reaches > 0.80 first
-        if (upPrice > entryThreshold) {
-          entryIndex = i;
-          entryPrice = upPrice;
-          entryTimestamp = priceHistory[i].timestamp;
-          winningToken = 'up';
-          break;
-        }
+      res.json({
+        success: true,
+        orderSize,
+        slug: slugParam as string,
+        totalProfit: parseFloat(profit.toFixed(4)),
+        dataPoints: priceHistory.length,
+      });
+    } else {
+      // Calculate profit for all slugs
+      const slugs = await TokenPriceHistory.distinct('slug');
 
-        // Check if DOWN token reaches > 0.80 first
-        if (downPrice > entryThreshold) {
-          entryIndex = i;
-          entryPrice = downPrice;
-          entryTimestamp = priceHistory[i].timestamp;
-          winningToken = 'down';
-          break;
-        }
+      if (slugs.length === 0) {
+        res.status(404).json({ 
+          error: 'No price data found',
+          message: 'No slugs found in database'
+        });
+        return;
       }
 
-      // If no entry point found, mark as no_entry
-      if (entryIndex === -1 || winningToken === 'none') {
+      const results: Array<{
+        slug: string;
+        profit: number;
+        dataPoints: number;
+      }> = [];
+
+      let totalProfit = 0;
+      let totalDataPoints = 0;
+
+      // Calculate profit for each slug
+      for (const slug of slugs) {
+        const priceHistory = await TokenPriceHistory.find({ slug })
+          .sort({ timestamp: 1 })
+          .exec();
+
+        if (priceHistory.length === 0) {
+          continue;
+        }
+
+        // Convert to format expected by strategy calculator
+        const priceData = priceHistory.map(item => ({
+          timestamp: item.timestamp,
+          upTokenPrice: item.upTokenPrice,
+          downTokenPrice: item.downTokenPrice,
+        }));
+
+        // Calculate profit using Grid Hedge Strategy
+        const profit = calculateGridHedgeStrategy(priceData, orderSize);
+
         results.push({
           slug,
-          winningToken: 'none',
-          entryPrice: 0,
-          entryTimestamp: priceHistory[0].timestamp,
-          outcome: 'no_entry',
-          profit: 0,
+          profit: parseFloat(profit.toFixed(4)),
+          dataPoints: priceHistory.length,
         });
-        noEntries++;
-        continue;
+
+        totalProfit += profit;
+        totalDataPoints += priceHistory.length;
       }
 
-      // Check if the winning token price drops below 0.50 after entry
-      let exitPrice: number | undefined;
-      let exitTimestamp: Date | undefined;
-      let isLoss = false;
-
-      for (let i = entryIndex + 1; i < priceHistory.length; i++) {
-        const currentPrice = winningToken === 'up' 
-          ? priceHistory[i].upTokenPrice 
-          : priceHistory[i].downTokenPrice;
-
-        if (currentPrice < exitThreshold) {
-          isLoss = true;
-          exitPrice = currentPrice;
-          exitTimestamp = priceHistory[i].timestamp;
-          break;
-        }
-      }
-
-      // Determine outcome and profit
-      const outcome: 'win' | 'loss' = isLoss ? 'loss' : 'win';
-      const profit = isLoss ? lossAmount : profitAmount;
-
-      results.push({
-        slug,
-        winningToken,
-        entryPrice,
-        entryTimestamp: entryTimestamp!,
-        exitPrice,
-        exitTimestamp,
-        outcome,
-        profit,
+      res.json({
+        success: true,
+        orderSize,
+        totalSlugs: slugs.length,
+        totalProfit: parseFloat(totalProfit.toFixed(4)),
+        totalDataPoints,
+        results, // Profit breakdown per slug
       });
-
-      totalProfit += profit;
-      if (isLoss) {
-        losses++;
-      } else {
-        wins++;
-      }
     }
-
-    const totalTrades = wins + losses;
-    const winRate = totalTrades > 0 ? (wins / totalTrades) * 100 : 0;
-    const averageProfitPerTrade = totalTrades > 0 ? totalProfit / totalTrades : 0;
-
-    const stats: StrategyStats = {
-      totalSlugs: slugs.length,
-      totalTrades,
-      wins,
-      losses,
-      noEntries,
-      winRate: parseFloat(winRate.toFixed(2)),
-      totalProfit: parseFloat(totalProfit.toFixed(2)),
-      averageProfitPerTrade: parseFloat(averageProfitPerTrade.toFixed(2)),
-      results,
-    };
-
-    res.json(stats);
   } catch (error) {
-    logger.error('Error calculating strategy:', error);
+    logger.error('Error calculating Grid Hedge Strategy:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
-

@@ -91,8 +91,84 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow-y: auto;
   min-height: 0;
+}
+
+.strategy-results {
+  margin-top: 20px;
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.strategy-results h3 {
+  margin: 0 0 15px 0;
+  color: #333;
+  font-size: 1.2rem;
+}
+
+.strategy-params {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.strategy-params label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 0.9rem;
+  color: #666;
+  font-weight: 500;
+}
+
+.strategy-params input {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  width: 120px;
+}
+
+.strategy-params input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.strategy-stats {
+  display: flex;
+  gap: 30px;
+  flex-wrap: wrap;
+}
+
+.strategy-stats .stat {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.strategy-stats .stat-label {
+  font-size: 0.85rem;
+  color: #666;
+  font-weight: 500;
+}
+
+.strategy-stats .stat-value {
+  font-size: 1.1rem;
+  color: #333;
+  font-weight: 600;
+}
+
+.strategy-stats .stat-value.positive {
+  color: #10b981;
+}
+
+.strategy-stats .stat-value.negative {
+  color: #ef4444;
 }
 
 @media (max-width: 768px) {

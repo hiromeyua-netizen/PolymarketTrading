@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import SlugSelector from './components/SlugSelector'
 import PriceChart from './components/PriceChart'
 import { fetchAllSlugs, fetchPriceHistory } from './services/api'
+import { calculateGridHedgeStrategy, StrategyResult } from './utils/strategyCalculator'
 import './App.css'
 
 interface PriceData {
@@ -18,6 +19,17 @@ function App() {
   const [priceData, setPriceData] = useState<PriceData[]>([])
   const [loading, setLoading] = useState<boolean>(false)
   const [error, setError] = useState<string | null>(null)
+  
+  // Strategy calculation parameters
+  const [maxTotalCost, setMaxTotalCost] = useState<number>(97)
+  const [gridGap, setGridGap] = useState<number>(5)
+  const [orderSize, setOrderSize] = useState<number>(1)
+  const [strategyResult, setStrategyResult] = useState<StrategyResult | null>(null)
+  
+  // Calculate strategy results
+  useEffect(() => {
+    setStrategyResult(calculateGridHedgeStrategy(priceData, maxTotalCost, gridGap, orderSize))
+  }, [priceData, maxTotalCost, gridGap, orderSize])
 
   useEffect(() => {
     loadSlugs()
@@ -82,7 +94,72 @@ function App() {
               {loading ? (
                 <div className="loading">Loading price data...</div>
               ) : priceData.length > 0 ? (
-                <PriceChart data={priceData} slug={selectedSlug} />
+                <>
+                  <PriceChart data={priceData} slug={selectedSlug} />
+                  {strategyResult && (
+                    <div className="strategy-results">
+                      <h3>Strategy Results</h3>
+                      <div className="strategy-params">
+                        <label>
+                          Max Total Cost:
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            max="1"
+                            value={maxTotalCost}
+                            onChange={(e) => setMaxTotalCost(parseFloat(e.target.value) || 0.97)}
+                          />
+                        </label>
+                        <label>
+                          Grid Gap:
+                          <input
+                            type="number"
+                            step="1"
+                            min="1"
+                            max="10"
+                            value={gridGap}
+                            onChange={(e) => setGridGap(parseInt(e.target.value) || 5)}
+                          />
+                        </label>
+                        <label>
+                          Order Size:
+                          <input
+                            type="number"
+                            step="0.1"
+                            min="0.1"
+                            value={orderSize}
+                            onChange={(e) => setOrderSize(parseFloat(e.target.value) || 1)}
+                          />
+                        </label>
+                      </div>
+                      <div className="strategy-stats">
+                        <div className="stat">
+                          <span className="stat-label">Total Profit:</span>
+                          <span className={`stat-value ${strategyResult.totalProfit >= 0 ? 'positive' : 'negative'}`}>
+                            {strategyResult.totalProfit.toFixed(2)}
+                          </span>
+                        </div>
+                        <div className="stat">
+                          <span className="stat-label">Total Cost:</span>
+                          <span className="stat-value">{strategyResult.totalCost.toFixed(2)}</span>
+                        </div>
+                        <div className="stat">
+                          <span className="stat-label">Final Value:</span>
+                          <span className="stat-value">{strategyResult.finalValue.toFixed(2)}</span>
+                        </div>
+                        <div className="stat">
+                          <span className="stat-label">Total Entries:</span>
+                          <span className="stat-value">{strategyResult.totalEntries}</span>
+                        </div>
+                        <div className="stat">
+                          <span className="stat-label">Hedges Filled:</span>
+                          <span className="stat-value">{strategyResult.totalHedgesFilled}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </>
               ) : (
                 <div className="no-data">No price data available for this slug</div>
               )}

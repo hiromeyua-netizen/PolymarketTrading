@@ -19,13 +19,13 @@ function App() {
   const [priceData, setPriceData] = useState<PriceData[]>([])
   const [loading, setLoading] = useState<boolean>(false)
   const [error, setError] = useState<string | null>(null)
-  
+
   // Strategy calculation parameters
   const [maxTotalCost, setMaxTotalCost] = useState<number>(97)
   const [gridGap, setGridGap] = useState<number>(5)
   const [orderSize, setOrderSize] = useState<number>(1)
   const [strategyResult, setStrategyResult] = useState<StrategyResult | null>(null)
-  
+
   // Calculate strategy results
   useEffect(() => {
     setStrategyResult(calculateGridHedgeStrategy(priceData, maxTotalCost, gridGap, orderSize))
@@ -95,7 +95,7 @@ function App() {
                 <div className="loading">Loading price data...</div>
               ) : priceData.length > 0 ? (
                 <>
-                  <PriceChart data={priceData} slug={selectedSlug} />
+
                   {strategyResult && (
                     <div className="strategy-results">
                       <h3>Strategy Results</h3>
@@ -159,6 +159,7 @@ function App() {
                       </div>
                     </div>
                   )}
+                  <PriceChart data={priceData} slug={selectedSlug} />
                 </>
               ) : (
                 <div className="no-data">No price data available for this slug</div>

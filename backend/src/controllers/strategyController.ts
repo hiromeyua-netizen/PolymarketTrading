@@ -66,14 +66,31 @@ export const calculateStrategy = async (req: Request, res: Response): Promise<vo
       return;
     }
 
+    // Get hours parameter (default 24 hours)
+    const hoursParam = req.query.hours;
+    const hours = hoursParam ? parseFloat(hoursParam as string) : 24;
+
+    if (isNaN(hours) || hours <= 0) {
+      res.status(400).json({ 
+        error: 'Invalid hours parameter',
+        message: 'hours must be a positive number'
+      });
+      return;
+    }
+
+    // Calculate cutoff time (current time - hours)
+    const cutoffTime = new Date(Date.now() - hours * 60 * 60 * 1000);
+
     // Calculate profit and loss amounts based on thresholds
     // Loss: difference between entry and exit thresholds (e.g., 0.80 - 0.50 = 0.30)
     const lossAmount = -(entryThreshold - exitThreshold);
     // Profit: difference between max price (1.0) and entry threshold (e.g., 1.0 - 0.80 = 0.20)
     const profitAmount = 1.0 - entryThreshold;
 
-    // Get all slugs
-    const slugs = await TokenPriceHistory.distinct('slug');
+    // Get slugs that have data within the time window
+    const slugs = await TokenPriceHistory.distinct('slug', {
+      timestamp: { $gte: cutoffTime }
+    });
 
     const results: StrategyResult[] = [];
     let totalProfit = 0;
@@ -83,8 +100,11 @@ export const calculateStrategy = async (req: Request, res: Response): Promise<vo
 
     // Process each slug
     for (const slug of slugs) {
-      // Get price history for this slug, sorted by timestamp
-      const priceHistory = await TokenPriceHistory.find({ slug })
+      // Get price history for this slug within the time window, sorted by timestamp
+      const priceHistory = await TokenPriceHistory.find({ 
+        slug,
+        timestamp: { $gte: cutoffTime }
+      })
         .sort({ timestamp: 1 })
         .exec();
 

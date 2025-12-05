@@ -192,7 +192,7 @@ function processToken(
         if (shouldEnter) {
           // Calculate hedge price (in cents, then convert to decimal)
           const entryPriceCents = gridLevel
-          const hedgePriceCents = Math.max(0, 100 - entryPriceCents - 3)
+          const hedgePriceCents = Math.max(0, maxTotalCost - entryPriceCents)
           const entryPrice = entryPriceCents / 100
           const hedgePrice = hedgePriceCents / 100
 

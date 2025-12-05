@@ -24,6 +24,9 @@ function App() {
   const [maxTotalCost, setMaxTotalCost] = useState<number>(97)
   const [gridGap, setGridGap] = useState<number>(5)
   const [orderSize, setOrderSize] = useState<number>(1)
+  
+  // Track expanded grid levels for order points
+  const [expandedLevels, setExpandedLevels] = useState<Set<number>>(new Set())
   const [strategyResult, setStrategyResult] = useState<StrategyResult | null>(null)
 
   // Calculate strategy results
@@ -157,6 +160,97 @@ function App() {
                           <span className="stat-value">{strategyResult.totalHedgesFilled}</span>
                         </div>
                       </div>
+                      
+                      {Object.keys(strategyResult.orderPoints).length > 0 && (
+                        <div className="order-points-section">
+                          <h4>Order Points</h4>
+                          <div className="order-points-container">
+                            {strategyResult.gridLevelsUsed.map((level) => {
+                              const levelKey = level.toString()
+                              const orderPairs = strategyResult.orderPoints[levelKey] || []
+                              if (orderPairs.length === 0) return null
+                              
+                              const isExpanded = expandedLevels.has(level)
+                              
+                              const toggleExpand = () => {
+                                setExpandedLevels(prev => {
+                                  const newSet = new Set(prev)
+                                  if (newSet.has(level)) {
+                                    newSet.delete(level)
+                                  } else {
+                                    newSet.add(level)
+                                  }
+                                  return newSet
+                                })
+                              }
+                              
+                              return (
+                                <div key={level} className="grid-level-group">
+                                  <div 
+                                    className="grid-level-header"
+                                    onClick={toggleExpand}
+                                    role="button"
+                                    tabIndex={0}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter' || e.key === ' ') {
+                                        e.preventDefault()
+                                        toggleExpand()
+                                      }
+                                    }}
+                                  >
+                                    <div className="grid-level-header-left">
+                                      <span className={`expand-icon ${isExpanded ? 'expanded' : ''}`}>
+                                        ▼
+                                      </span>
+                                      <span className="grid-level-label">Grid Level: {level}c</span>
+                                    </div>
+                                    <span className="grid-level-count">{orderPairs.length} order pair(s)</span>
+                                  </div>
+                                  {isExpanded && (
+                                    <div className="order-pairs-list">
+                                      {orderPairs.map((pair, index) => (
+                                        <div key={index} className="order-pair">
+                                          <div className="order-pair-header">
+                                            <span className="pair-index">Pair #{index + 1}</span>
+                                            {pair.entryOrder.isReEntry && (
+                                              <span className="re-entry-badge">Re-entry</span>
+                                            )}
+                                          </div>
+                                          <div className="order-details">
+                                            <div className="order-entry">
+                                              <div className="order-type">Entry Order</div>
+                                              <div className="order-info">
+                                                <span><strong>Token:</strong> {pair.entryOrder.tokenType.toUpperCase()}</span>
+                                                <span><strong>Price:</strong> {(pair.entryOrder.price * 100).toFixed(0)}c</span>
+                                                <span><strong>Size:</strong> {pair.entryOrder.size}</span>
+                                                <span><strong>Time:</strong> {new Date(pair.entryOrder.timestamp).toLocaleString()}</span>
+                                              </div>
+                                            </div>
+                                            <div className="order-hedge">
+                                              <div className="order-type">Hedge Order</div>
+                                              <div className="order-info">
+                                                <span><strong>Token:</strong> {pair.hedgeOrder.tokenType.toUpperCase()}</span>
+                                                <span><strong>Price:</strong> {(pair.hedgeOrder.price * 100).toFixed(0)}c</span>
+                                                <span><strong>Size:</strong> {pair.hedgeOrder.size}</span>
+                                                <span className={pair.hedgeOrder.isFilled ? 'filled' : 'pending'}>
+                                                  <strong>Status:</strong> {pair.hedgeOrder.isFilled ? 'Filled' : 'Pending'}
+                                                </span>
+                                                {pair.hedgeOrder.timestamp && (
+                                                  <span><strong>Filled Time:</strong> {new Date(pair.hedgeOrder.timestamp).toLocaleString()}</span>
+                                                )}
+                                              </div>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                   <PriceChart data={priceData} slug={selectedSlug} />

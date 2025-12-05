@@ -60,7 +60,7 @@ export class TradingBot {
         this.marketMonitor.on(MarketMonitorEvent.COIN_PRICE_BIAS_CHANGE, (coinPriceBias: number) => {
             this.handleCoinPriceBiasChange(coinPriceBias);
         });
-        this.marketMonitor.on(MarketMonitorEvent.MARKET_UPDATED, (marketInfo: MarketInfo) => {
+        this.marketMonitor.on(MarketMonitorEvent.MARKET_UPDATED, (marketInfo: MarketInfo | null) => {
             this.handleMarketUpdated(marketInfo);
         });
 
@@ -225,8 +225,15 @@ export class TradingBot {
     private handleCoinPriceBiasChange(coinPriceBias: number): void {
     }
 
-    private async handleMarketUpdated(marketInfo: MarketInfo): Promise<void> {
+    private async handleMarketUpdated(marketInfo: MarketInfo | null): Promise<void> {
         logger.info(`first order count: ${this.firstOrderCount}, second order count: ${this.secondOrderCount}`);
+        
+        // Check if marketInfo is null
+        if (!marketInfo) {
+            logger.warn('Market updated event received but marketInfo is null');
+            return;
+        }
+        
         logger.info(`Market updated: ${marketInfo.question}`);
         
         // Get the previous market slug (before it was updated)

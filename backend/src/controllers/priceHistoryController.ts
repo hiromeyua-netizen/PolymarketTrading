@@ -94,9 +94,34 @@ export const getAllSlugs = async (req: Request, res: Response): Promise<void> =>
     // Get distinct slugs from the database
     const slugs = await TokenPriceHistory.distinct('slug');
 
+    // Get the latest timestamp for each slug and sort by it
+    const slugsWithLatestTimestamp = await Promise.all(
+      slugs.map(async (slug) => {
+        const latestPrice = await TokenPriceHistory.findOne(
+          { slug },
+          { timestamp: 1 },
+          { sort: { timestamp: -1 } }
+        );
+        return {
+          slug,
+          latestTimestamp: latestPrice?.timestamp || new Date(0), // Use epoch if no data found
+        };
+      })
+    );
+
+    // Sort by latest timestamp (descending - most recent first)
+    slugsWithLatestTimestamp.sort((a, b) => {
+      const timeA = a.latestTimestamp.getTime();
+      const timeB = b.latestTimestamp.getTime();
+      return timeB - timeA; // Descending order
+    });
+
+    // Extract sorted slugs
+    const sortedSlugs = slugsWithLatestTimestamp.map(item => item.slug);
+
     res.json({
-      count: slugs.length,
-      slugs: slugs.sort(), // Sort alphabetically
+      count: sortedSlugs.length,
+      slugs: sortedSlugs,
     });
   } catch (error) {
     logger.error('Error fetching all slugs:', error);

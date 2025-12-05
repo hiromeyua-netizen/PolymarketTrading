@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import SlugSelector from './components/SlugSelector'
 import PriceChart from './components/PriceChart'
-import { fetchAllSlugs, fetchPriceHistory } from './services/api'
+import { fetchAllSlugs, fetchPriceHistory, fetchTotalProfit, TotalProfitResponse } from './services/api'
 import { calculateGridHedgeStrategy, StrategyResult } from './utils/strategyCalculator'
 import './App.css'
 
@@ -24,9 +24,15 @@ function App() {
   const [maxTotalCost, setMaxTotalCost] = useState<number>(97)
   const [gridGap, setGridGap] = useState<number>(5)
   const [orderSize, setOrderSize] = useState<number>(1)
+  const [count, setCount] = useState<number | undefined>(undefined)
   
   // Track expanded grid levels for order points
   const [expandedLevels, setExpandedLevels] = useState<Set<number>>(new Set())
+  
+  // Backend total profit results
+  const [totalProfitData, setTotalProfitData] = useState<TotalProfitResponse | null>(null)
+  const [loadingTotalProfit, setLoadingTotalProfit] = useState<boolean>(false)
+  const [totalProfitError, setTotalProfitError] = useState<string | null>(null)
   const [strategyResult, setStrategyResult] = useState<StrategyResult | null>(null)
 
   // Calculate strategy results
@@ -70,6 +76,20 @@ function App() {
     }
   }
 
+  const handleCalculateTotalProfit = async () => {
+    setLoadingTotalProfit(true)
+    setTotalProfitError(null)
+    try {
+      const response = await fetchTotalProfit(maxTotalCost, gridGap, orderSize, count)
+      setTotalProfitData(response)
+    } catch (err) {
+      setTotalProfitError('Failed to calculate total profit')
+      console.error('Error calculating total profit:', err)
+    } finally {
+      setLoadingTotalProfit(false)
+    }
+  }
+
   return (
     <div className="app">
       <div className="container">
@@ -92,6 +112,116 @@ function App() {
             </div>
           )}
 
+          {/* Total Profit Calculation Section - Always Visible */}
+          <div className="total-profit-section">
+            <h3>Total Profit Calculator (All Slugs)</h3>
+            <div className="strategy-params">
+              <label>
+                Max Total Cost:
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max="1"
+                  value={maxTotalCost}
+                  onChange={(e) => setMaxTotalCost(parseFloat(e.target.value) || 0.97)}
+                />
+              </label>
+              <label>
+                Grid Gap:
+                <input
+                  type="number"
+                  step="1"
+                  min="1"
+                  max="10"
+                  value={gridGap}
+                  onChange={(e) => setGridGap(parseInt(e.target.value) || 5)}
+                />
+              </label>
+              <label>
+                Order Size:
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0.1"
+                  value={orderSize}
+                  onChange={(e) => setOrderSize(parseFloat(e.target.value) || 1)}
+                />
+              </label>
+              <label>
+                Count (optional):
+                <input
+                  type="number"
+                  step="1"
+                  min="1"
+                  placeholder="All slugs"
+                  value={count || ''}
+                  onChange={(e) => setCount(e.target.value ? parseInt(e.target.value) || undefined : undefined)}
+                />
+              </label>
+              <button 
+                className="calculate-total-profit-btn"
+                onClick={handleCalculateTotalProfit}
+                disabled={loadingTotalProfit}
+              >
+                {loadingTotalProfit ? 'Calculating...' : 'Calculate Total Profit'}
+              </button>
+            </div>
+
+            {totalProfitError && (
+              <div className="error-message">
+                {totalProfitError}
+              </div>
+            )}
+
+            {totalProfitData && (
+              <div className="total-profit-results">
+                <h4>Results</h4>
+                <div className="strategy-stats">
+                  <div className="stat">
+                    <span className="stat-label">Total Profit:</span>
+                    <span className={`stat-value ${totalProfitData.totalProfit >= 0 ? 'positive' : 'negative'}`}>
+                      {totalProfitData.totalProfit.toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="stat">
+                    <span className="stat-label">Total Cost:</span>
+                    <span className="stat-value">{totalProfitData.totalCost.toFixed(2)}</span>
+                  </div>
+                  <div className="stat">
+                    <span className="stat-label">Total Final Value:</span>
+                    <span className="stat-value">{totalProfitData.totalFinalValue.toFixed(2)}</span>
+                  </div>
+                  <div className="stat">
+                    <span className="stat-label">Total Entries:</span>
+                    <span className="stat-value">{totalProfitData.totalEntries}</span>
+                  </div>
+                  <div className="stat">
+                    <span className="stat-label">Total Hedges Filled:</span>
+                    <span className="stat-value">{totalProfitData.totalHedgesFilled}</span>
+                  </div>
+                  <div className="stat">
+                    <span className="stat-label">Total Slugs:</span>
+                    <span className="stat-value">{totalProfitData.totalSlugCount}</span>
+                  </div>
+                  <div className="stat">
+                    <span className="stat-label">Processed Slugs:</span>
+                    <span className="stat-value">{totalProfitData.processedSlugCount}</span>
+                  </div>
+                  <div className="stat">
+                    <span className="stat-label">Successfully Processed:</span>
+                    <span className="stat-value">{totalProfitData.actualProcessedCount}</span>
+                  </div>
+                </div>
+                {totalProfitData.parameters.count && (
+                  <div className="info-note">
+                    Calculated for last {totalProfitData.parameters.count} slug(s)
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
           {selectedSlug && (
             <div className="chart-container">
               {loading ? (
@@ -101,41 +231,7 @@ function App() {
 
                   {strategyResult && (
                     <div className="strategy-results">
-                      <h3>Strategy Results</h3>
-                      <div className="strategy-params">
-                        <label>
-                          Max Total Cost:
-                          <input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            max="1"
-                            value={maxTotalCost}
-                            onChange={(e) => setMaxTotalCost(parseFloat(e.target.value) || 0.97)}
-                          />
-                        </label>
-                        <label>
-                          Grid Gap:
-                          <input
-                            type="number"
-                            step="1"
-                            min="1"
-                            max="10"
-                            value={gridGap}
-                            onChange={(e) => setGridGap(parseInt(e.target.value) || 5)}
-                          />
-                        </label>
-                        <label>
-                          Order Size:
-                          <input
-                            type="number"
-                            step="0.1"
-                            min="0.1"
-                            value={orderSize}
-                            onChange={(e) => setOrderSize(parseFloat(e.target.value) || 1)}
-                          />
-                        </label>
-                      </div>
+                      <h3>Strategy Results (Current Slug)</h3>
                       <div className="strategy-stats">
                         <div className="stat">
                           <span className="stat-label">Total Profit:</span>
@@ -253,6 +349,7 @@ function App() {
                       )}
                     </div>
                   )}
+
                   <PriceChart data={priceData} slug={selectedSlug} />
                 </>
               ) : (

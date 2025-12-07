@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import TokenPriceHistory from '../models/TokenPriceHistory';
 import { logger } from '../utils/logger';
-import { calculateGridHedgeStrategy, PriceData } from '../utils/strategyCalculator';
+import { calculateGridHedgeStrategy, PriceData } from '../utils/strategyCalculator1';
 
 /**
  * Calculate total profit across all slugs

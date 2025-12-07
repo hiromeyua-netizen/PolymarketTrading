@@ -106,7 +106,7 @@ export default function Strategy2Results({
                     <div className="order-type">Limit Order</div>
                     <div className="order-info">
                       <span><strong>Token:</strong> {strategyResult.secondSellLimitOrder.tokenType.toUpperCase()}</span>
-                      <span><strong>Price:</strong> {(strategyResult.secondSellLimitOrder.price * 100).toFixed(0)}c</span>
+                      <span><strong>Price:</strong> {(strategyResult.secondSellLimitOrder.price).toFixed(0)}c</span>
                       <span><strong>Size:</strong> {strategyResult.secondSellLimitOrder.size}</span>
                       <span className={strategyResult.secondSellLimitOrder.isFilled ? 'filled' : 'pending'}>
                         <strong>Status:</strong> {strategyResult.secondSellLimitOrder.isFilled ? 'Filled' : 'Pending'}

@@ -94,7 +94,7 @@ export function calculatePrePurchasedSellStrategy(
         // If UP sold at sellThreshold, DOWN limit = targetTotal - sellThreshold
         const limitPriceCents = targetTotal - sellThreshold
         secondSellLimitOrder = {
-          price: limitPriceCents / 100,
+          price: limitPriceCents,
           timestamp: null,
           size: orderSize,
           tokenType: 'down',
@@ -115,7 +115,7 @@ export function calculatePrePurchasedSellStrategy(
         // Place limit order for UP token
         const limitPriceCents = targetTotal - sellThreshold
         secondSellLimitOrder = {
-          price: limitPriceCents / 100,
+          price: limitPriceCents,
           timestamp: null,
           size: orderSize,
           tokenType: 'up',

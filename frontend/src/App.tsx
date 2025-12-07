@@ -5,6 +5,7 @@ import StrategySelector from './components/StrategySelector'
 import Strategy1Results from './components/Strategy1Results'
 import Strategy2Results from './components/Strategy2Results'
 import TotalProfitCalculator from './components/TotalProfitCalculator'
+import TotalProfitCalculator2 from './components/TotalProfitCalculator2'
 import { fetchAllSlugs, fetchPriceHistory } from './services/api'
 import { calculateGridHedgeStrategy, StrategyResult as Strategy1Result } from './utils/strategyCalculator1'
 import { calculatePrePurchasedSellStrategy, StrategyResult as Strategy2Result } from './utils/strategyCalculator2'
@@ -122,6 +123,19 @@ function App() {
               count={count}
               onMaxTotalCostChange={setMaxTotalCost}
               onGridGapChange={setGridGap}
+              onOrderSizeChange={setOrderSize}
+              onCountChange={setCount}
+            />
+          )}
+
+          {selectedStrategy === 'strategy2' && (
+            <TotalProfitCalculator2
+              targetTotal={targetTotal}
+              sellThreshold={sellThreshold}
+              orderSize={orderSize}
+              count={count}
+              onTargetTotalChange={setTargetTotal}
+              onSellThresholdChange={setSellThreshold}
               onOrderSizeChange={setOrderSize}
               onCountChange={setCount}
             />

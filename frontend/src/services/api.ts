@@ -87,3 +87,44 @@ export const fetchTotalProfit = async (
   return response.data
 }
 
+export interface TotalProfit2Response {
+  totalProfit: number
+  totalCost: number
+  totalFinalValue: number
+  totalReceived: number
+  totalSlugCount: number
+  processedSlugCount: number
+  actualProcessedCount: number
+  parameters: {
+    targetTotal: number
+    sellThreshold: number
+    orderSize: number
+    count: number | null
+  }
+  results: Array<{
+    slug: string
+    profit: number
+    cost: number
+    finalValue: number
+    totalReceived: number
+  }>
+}
+
+export const fetchTotalProfit2 = async (
+  targetTotal: number,
+  sellThreshold: number,
+  orderSize: number,
+  count?: number
+): Promise<TotalProfit2Response> => {
+  const params = new URLSearchParams()
+  params.append('targetTotal', targetTotal.toString())
+  params.append('sellThreshold', sellThreshold.toString())
+  params.append('orderSize', orderSize.toString())
+  if (count !== undefined) {
+    params.append('count', count.toString())
+  }
+
+  const response = await axios.get<TotalProfit2Response>(`${API_BASE_URL}/strategy/total-profit-2?${params.toString()}`)
+  return response.data
+}
+

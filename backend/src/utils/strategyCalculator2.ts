@@ -73,8 +73,8 @@ export interface PriceData {
     // Process price data chronologically
     for (let i = 0; i < priceData.length; i++) {
       const data = priceData[i]
-      const upSellPriceCents = 100 - Math.round(data.upTokenPrice * 100)
-      const downSellPriceCents = 100 - Math.round(data.downTokenPrice * 100)
+      const upSellPriceCents = 100 -Math.round(data.upTokenPrice * 100)
+      const downSellPriceCents = 100 -Math.round(data.downTokenPrice * 100)
   
       // If we haven't sold yet, check if either token reaches sell threshold
       if (firstSellOrder === null) {
@@ -94,7 +94,7 @@ export interface PriceData {
           // If UP sold at sellThreshold, DOWN limit = targetTotal - sellThreshold
           const limitPriceCents = targetTotal - sellThreshold
           secondSellLimitOrder = {
-            price: limitPriceCents / 100,
+            price: limitPriceCents,
             timestamp: null,
             size: orderSize,
             tokenType: 'down',
@@ -115,7 +115,7 @@ export interface PriceData {
           // Place limit order for UP token
           const limitPriceCents = targetTotal - sellThreshold
           secondSellLimitOrder = {
-            price: limitPriceCents / 100,
+            price: limitPriceCents,
             timestamp: null,
             size: orderSize,
             tokenType: 'up',
@@ -158,6 +158,7 @@ export interface PriceData {
       finalValue = (100 - lastData.upTokenPrice + 100 - lastData.downTokenPrice) * orderSize
     }
   
+    finalValue = finalValue / 100;
     const totalProfit = finalValue - initialCost
   
     return {
@@ -169,4 +170,5 @@ export interface PriceData {
       totalReceived: Math.round(totalReceived * 100) / 100
     }
   }
-
+  
+  

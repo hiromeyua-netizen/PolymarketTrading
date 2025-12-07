@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import SlugSelector from './components/SlugSelector'
 import PriceChart from './components/PriceChart'
+import StrategySelector from './components/StrategySelector'
 import Strategy1Results from './components/Strategy1Results'
 import Strategy2Results from './components/Strategy2Results'
 import TotalProfitCalculator from './components/TotalProfitCalculator'
@@ -33,6 +34,9 @@ function App() {
   // Strategy 2 calculation parameters
   const [targetTotal, setTargetTotal] = useState<number>(105)
   const [sellThreshold, setSellThreshold] = useState<number>(65)
+  
+  // Selected strategy
+  const [selectedStrategy, setSelectedStrategy] = useState<'strategy1' | 'strategy2'>('strategy1')
   
   const [strategyResult, setStrategyResult] = useState<Strategy1Result | null>(null)
   const [strategy2Result, setStrategy2Result] = useState<Strategy2Result | null>(null)
@@ -105,16 +109,23 @@ function App() {
             </div>
           )}
 
-          <TotalProfitCalculator
-            maxTotalCost={maxTotalCost}
-            gridGap={gridGap}
-            orderSize={orderSize}
-            count={count}
-            onMaxTotalCostChange={setMaxTotalCost}
-            onGridGapChange={setGridGap}
-            onOrderSizeChange={setOrderSize}
-            onCountChange={setCount}
+          <StrategySelector
+            selectedStrategy={selectedStrategy}
+            onStrategyChange={setSelectedStrategy}
           />
+
+          {selectedStrategy === 'strategy1' && (
+            <TotalProfitCalculator
+              maxTotalCost={maxTotalCost}
+              gridGap={gridGap}
+              orderSize={orderSize}
+              count={count}
+              onMaxTotalCostChange={setMaxTotalCost}
+              onGridGapChange={setGridGap}
+              onOrderSizeChange={setOrderSize}
+              onCountChange={setCount}
+            />
+          )}
 
           {selectedSlug && (
             <div className="chart-container">
@@ -122,8 +133,7 @@ function App() {
                 <div className="loading">Loading price data...</div>
               ) : priceData.length > 0 ? (
                 <>
-
-                  {strategyResult && (
+                  {selectedStrategy === 'strategy1' && strategyResult && (
                     <Strategy1Results
                       strategyResult={strategyResult}
                       maxTotalCost={maxTotalCost}
@@ -135,7 +145,7 @@ function App() {
                     />
                   )}
 
-                  {strategy2Result && (
+                  {selectedStrategy === 'strategy2' && strategy2Result && (
                     <Strategy2Results
                       strategyResult={strategy2Result}
                       targetTotal={targetTotal}

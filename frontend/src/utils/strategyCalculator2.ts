@@ -158,6 +158,7 @@ export function calculatePrePurchasedSellStrategy(
     finalValue = (100 - lastData.upTokenPrice + 100 - lastData.downTokenPrice) * orderSize
   }
 
+  finalValue = finalValue / 100;
   const totalProfit = finalValue - initialCost
 
   return {

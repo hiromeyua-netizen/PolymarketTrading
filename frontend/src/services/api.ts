@@ -90,7 +90,6 @@ export const fetchTotalProfit = async (
 export interface TotalProfit2Response {
   totalProfit: number
   totalCost: number
-  totalFinalValue: number
   totalReceived: number
   totalSlugCount: number
   processedSlugCount: number
@@ -105,7 +104,6 @@ export interface TotalProfit2Response {
     slug: string
     profit: number
     cost: number
-    finalValue: number
     totalReceived: number
   }>
 }

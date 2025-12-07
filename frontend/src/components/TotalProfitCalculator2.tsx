@@ -117,10 +117,6 @@ export default function TotalProfitCalculator2({
               <span className="stat-value">{totalProfitData.totalCost.toFixed(2)}</span>
             </div>
             <div className="stat">
-              <span className="stat-label">Total Final Value:</span>
-              <span className="stat-value">{totalProfitData.totalFinalValue.toFixed(2)}</span>
-            </div>
-            <div className="stat">
               <span className="stat-label">Total Received:</span>
               <span className="stat-value">{totalProfitData.totalReceived.toFixed(2)}</span>
             </div>

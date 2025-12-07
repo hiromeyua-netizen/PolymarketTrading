@@ -24,7 +24,6 @@ export interface PriceData {
   export interface StrategyResult {
     totalProfit: number
     totalCost: number
-    finalValue: number
     firstSellOrder: FirstSellOrder | null
     secondSellLimitOrder: SecondSellLimitOrder | null
     totalReceived: number
@@ -55,7 +54,6 @@ export interface PriceData {
       return {
         totalProfit: 0,
         totalCost: 0,
-        finalValue: 0,
         firstSellOrder: null,
         secondSellLimitOrder: null,
         totalReceived: 0
@@ -129,42 +127,26 @@ export interface PriceData {
         const currentPriceCents = secondSellLimitOrder.tokenType === 'up' 
           ? upSellPriceCents 
           : downSellPriceCents
-        const limitPriceCents = Math.round(secondSellLimitOrder.price * 100)
+        const limitPriceCents = Math.round(secondSellLimitOrder.price)
   
         // Limit order fills when current price reaches or goes below limit price
         // (selling the remaining token)
-        if (currentPriceCents <= limitPriceCents) {
+        if (currentPriceCents >= limitPriceCents) {
           secondSellLimitOrder.isFilled = true
           secondSellLimitOrder.timestamp = data.timestamp
+          secondSellLimitOrder.price = currentPriceCents
           totalReceived += secondSellLimitOrder.price * secondSellLimitOrder.size
         }
       }
     }
   
-    // Calculate final value
-    // If limit order was never filled, use final market price for remaining token
-    let finalValue = totalReceived
+    totalReceived /= 100
   
-    if (firstSellOrder && secondSellLimitOrder && !secondSellLimitOrder.isFilled) {
-      // Limit order never filled, use final market price
-      const lastData = priceData[priceData.length - 1]
-      const remainingTokenPrice = secondSellLimitOrder.tokenType === 'up'
-        ? lastData.upTokenPrice
-        : lastData.downTokenPrice
-      finalValue += remainingTokenPrice * secondSellLimitOrder.size
-    } else if (!firstSellOrder) {
-      // Never sold, use final market prices for both tokens
-      const lastData = priceData[priceData.length - 1]
-      finalValue = (100 - lastData.upTokenPrice + 100 - lastData.downTokenPrice) * orderSize
-    }
-  
-    finalValue = finalValue / 100;
-    const totalProfit = finalValue - initialCost
+    const totalProfit = totalReceived - initialCost
   
     return {
       totalProfit: Math.round(totalProfit * 100) / 100,
       totalCost: Math.round(initialCost * 100) / 100,
-      finalValue: Math.round(finalValue * 100) / 100,
       firstSellOrder,
       secondSellLimitOrder,
       totalReceived: Math.round(totalReceived * 100) / 100

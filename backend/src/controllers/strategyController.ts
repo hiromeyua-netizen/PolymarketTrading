@@ -308,13 +308,11 @@ export const calculateTotalProfit2 = async (req: Request, res: Response): Promis
     // Calculate strategy for each slug
     let totalProfit = 0;
     let totalCost = 0;
-    let totalFinalValue = 0;
     let totalReceived = 0;
     const results: Array<{
       slug: string;
       profit: number;
       cost: number;
-      finalValue: number;
       totalReceived: number;
     }> = [];
 
@@ -352,7 +350,6 @@ export const calculateTotalProfit2 = async (req: Request, res: Response): Promis
         // Accumulate totals
         totalProfit += strategyResult.totalProfit;
         totalCost += strategyResult.totalCost;
-        totalFinalValue += strategyResult.finalValue;
         totalReceived += strategyResult.totalReceived;
 
         // Store individual result
@@ -360,7 +357,6 @@ export const calculateTotalProfit2 = async (req: Request, res: Response): Promis
           slug,
           profit: strategyResult.totalProfit,
           cost: strategyResult.totalCost,
-          finalValue: strategyResult.finalValue,
           totalReceived: strategyResult.totalReceived,
         });
       } catch (error) {
@@ -372,7 +368,6 @@ export const calculateTotalProfit2 = async (req: Request, res: Response): Promis
     res.json({
       totalProfit: Math.round(totalProfit * 100) / 100,
       totalCost: Math.round(totalCost * 100) / 100,
-      totalFinalValue: Math.round(totalFinalValue * 100) / 100,
       totalReceived: Math.round(totalReceived * 100) / 100,
       totalSlugCount: allSlugs.length,
       processedSlugCount: slugs.length,

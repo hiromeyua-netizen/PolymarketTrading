@@ -68,10 +68,6 @@ export default function Strategy2Results({
           <span className="stat-value">{strategyResult.totalCost.toFixed(2)}</span>
         </div>
         <div className="stat">
-          <span className="stat-label">Final Value:</span>
-          <span className="stat-value">{strategyResult.finalValue.toFixed(2)}</span>
-        </div>
-        <div className="stat">
           <span className="stat-label">Total Received:</span>
           <span className="stat-value">{strategyResult.totalReceived.toFixed(2)}</span>
         </div>

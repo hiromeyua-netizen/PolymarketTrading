@@ -7,11 +7,13 @@ interface TotalProfitCalculatorProps {
   orderSize: number
   count: number | undefined
   enableRebuy: boolean
+  enableDoubleSide: boolean
   onMaxTotalCostChange: (value: number) => void
   onGridGapChange: (value: number) => void
   onOrderSizeChange: (value: number) => void
   onCountChange: (value: number | undefined) => void
   onEnableRebuyChange: (value: boolean) => void
+  onEnableDoubleSideChange: (value: boolean) => void
 }
 
 export default function TotalProfitCalculator({
@@ -20,11 +22,13 @@ export default function TotalProfitCalculator({
   orderSize,
   count,
   enableRebuy,
+  enableDoubleSide,
   onMaxTotalCostChange,
   onGridGapChange,
   onOrderSizeChange,
   onCountChange,
-  onEnableRebuyChange
+  onEnableRebuyChange,
+  onEnableDoubleSideChange
 }: TotalProfitCalculatorProps) {
   const [totalProfitData, setTotalProfitData] = useState<TotalProfitResponse | null>(null)
   const [loadingTotalProfit, setLoadingTotalProfit] = useState<boolean>(false)
@@ -34,7 +38,7 @@ export default function TotalProfitCalculator({
     setLoadingTotalProfit(true)
     setTotalProfitError(null)
     try {
-      const response = await fetchTotalProfit(maxTotalCost, gridGap, orderSize, count, enableRebuy)
+      const response = await fetchTotalProfit(maxTotalCost, gridGap, orderSize, count, enableRebuy, enableDoubleSide)
       setTotalProfitData(response)
     } catch (err) {
       setTotalProfitError('Failed to calculate total profit')
@@ -92,23 +96,43 @@ export default function TotalProfitCalculator({
           />
         </label>
       </div>
-      <div className="toggle-container">
-        <label className="toggle-label" htmlFor="enable-rebuy-toggle-total">
-          <div className="toggle-label-content">
-            <div className="toggle-title">Enable Rebuy</div>
-            <div className="toggle-description">Allow re-entry at grid levels after hedge is filled</div>
-          </div>
-          <div className="toggle-switch">
-            <input
-              type="checkbox"
-              id="enable-rebuy-toggle-total"
-              checked={enableRebuy}
-              onChange={(e) => onEnableRebuyChange(e.target.checked)}
-              className="toggle-input"
-            />
-            <span className="toggle-slider"></span>
-          </div>
-        </label>
+      <div className="toggles-wrapper">
+        <div className="toggle-container">
+          <label className="toggle-label" htmlFor="enable-rebuy-toggle-total">
+            <div className="toggle-label-content">
+              <div className="toggle-title">Enable Rebuy</div>
+              <div className="toggle-description">Allow re-entry at grid levels after hedge is filled</div>
+            </div>
+            <div className="toggle-switch">
+              <input
+                type="checkbox"
+                id="enable-rebuy-toggle-total"
+                checked={enableRebuy}
+                onChange={(e) => onEnableRebuyChange(e.target.checked)}
+                className="toggle-input"
+              />
+              <span className="toggle-slider"></span>
+            </div>
+          </label>
+        </div>
+        <div className="toggle-container">
+          <label className="toggle-label" htmlFor="enable-double-side-toggle-total">
+            <div className="toggle-label-content">
+              <div className="toggle-title">Enable Double Side</div>
+              <div className="toggle-description">Process both UP and DOWN tokens (disable to process only the side that reaches first grid level)</div>
+            </div>
+            <div className="toggle-switch">
+              <input
+                type="checkbox"
+                id="enable-double-side-toggle-total"
+                checked={enableDoubleSide}
+                onChange={(e) => onEnableDoubleSideChange(e.target.checked)}
+                className="toggle-input"
+              />
+              <span className="toggle-slider"></span>
+            </div>
+          </label>
+        </div>
       </div>
       <button 
         className="calculate-total-profit-btn"

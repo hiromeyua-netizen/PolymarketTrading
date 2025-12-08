@@ -7,10 +7,12 @@ interface Strategy1ResultsProps {
   gridGap: number
   orderSize: number
   enableRebuy: boolean
+  enableDoubleSide: boolean
   onMaxTotalCostChange: (value: number) => void
   onGridGapChange: (value: number) => void
   onOrderSizeChange: (value: number) => void
   onEnableRebuyChange: (value: boolean) => void
+  onEnableDoubleSideChange: (value: boolean) => void
 }
 
 export default function Strategy1Results({
@@ -19,10 +21,12 @@ export default function Strategy1Results({
   gridGap,
   orderSize,
   enableRebuy,
+  enableDoubleSide,
   onMaxTotalCostChange,
   onGridGapChange,
   onOrderSizeChange,
-  onEnableRebuyChange
+  onEnableRebuyChange,
+  onEnableDoubleSideChange
 }: Strategy1ResultsProps) {
   const [expandedLevels, setExpandedLevels] = useState<Set<number>>(new Set())
 
@@ -75,23 +79,43 @@ export default function Strategy1Results({
           />
         </label>
       </div>
-      <div className="toggle-container">
-        <label className="toggle-label" htmlFor="enable-rebuy-toggle">
-          <div className="toggle-label-content">
-            <div className="toggle-title">Enable Rebuy</div>
-            <div className="toggle-description">Allow re-entry at grid levels after hedge is filled</div>
-          </div>
-          <div className="toggle-switch">
-            <input
-              type="checkbox"
-              id="enable-rebuy-toggle"
-              checked={enableRebuy}
-              onChange={(e) => onEnableRebuyChange(e.target.checked)}
-              className="toggle-input"
-            />
-            <span className="toggle-slider"></span>
-          </div>
-        </label>
+      <div className="toggles-wrapper">
+        <div className="toggle-container">
+          <label className="toggle-label" htmlFor="enable-rebuy-toggle">
+            <div className="toggle-label-content">
+              <div className="toggle-title">Enable Rebuy</div>
+              <div className="toggle-description">Allow re-entry at grid levels after hedge is filled</div>
+            </div>
+            <div className="toggle-switch">
+              <input
+                type="checkbox"
+                id="enable-rebuy-toggle"
+                checked={enableRebuy}
+                onChange={(e) => onEnableRebuyChange(e.target.checked)}
+                className="toggle-input"
+              />
+              <span className="toggle-slider"></span>
+            </div>
+          </label>
+        </div>
+        <div className="toggle-container">
+          <label className="toggle-label" htmlFor="enable-double-side-toggle">
+            <div className="toggle-label-content">
+              <div className="toggle-title">Enable Double Side</div>
+              <div className="toggle-description">Process both UP and DOWN tokens (disable to process only the side that reaches first grid level)</div>
+            </div>
+            <div className="toggle-switch">
+              <input
+                type="checkbox"
+                id="enable-double-side-toggle"
+                checked={enableDoubleSide}
+                onChange={(e) => onEnableDoubleSideChange(e.target.checked)}
+                className="toggle-input"
+              />
+              <span className="toggle-slider"></span>
+            </div>
+          </label>
+        </div>
       </div>
       <div className="strategy-stats">
         <div className="stat">

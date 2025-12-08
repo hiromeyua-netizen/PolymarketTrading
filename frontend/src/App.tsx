@@ -32,6 +32,7 @@ function App() {
   const [orderSize, setOrderSize] = useState<number>(1)
   const [count, setCount] = useState<number | undefined>(undefined)
   const [enableRebuy, setEnableRebuy] = useState<boolean>(true)
+  const [enableDoubleSide, setEnableDoubleSide] = useState<boolean>(true)
   
   // Strategy 2 calculation parameters
   const [targetTotal, setTargetTotal] = useState<number>(105)
@@ -45,8 +46,8 @@ function App() {
 
   // Calculate strategy 1 results
   useEffect(() => {
-    setStrategyResult(calculateGridHedgeStrategy(priceData, maxTotalCost, gridGap, orderSize, enableRebuy))
-  }, [priceData, maxTotalCost, gridGap, orderSize, enableRebuy])
+    setStrategyResult(calculateGridHedgeStrategy(priceData, maxTotalCost, gridGap, orderSize, enableRebuy, enableDoubleSide))
+  }, [priceData, maxTotalCost, gridGap, orderSize, enableRebuy, enableDoubleSide])
 
   // Calculate strategy 2 results
   useEffect(() => {
@@ -123,11 +124,13 @@ function App() {
               orderSize={orderSize}
               count={count}
               enableRebuy={enableRebuy}
+              enableDoubleSide={enableDoubleSide}
               onMaxTotalCostChange={setMaxTotalCost}
               onGridGapChange={setGridGap}
               onOrderSizeChange={setOrderSize}
               onCountChange={setCount}
               onEnableRebuyChange={setEnableRebuy}
+              onEnableDoubleSideChange={setEnableDoubleSide}
             />
           )}
 
@@ -157,10 +160,12 @@ function App() {
                       gridGap={gridGap}
                       orderSize={orderSize}
                       enableRebuy={enableRebuy}
+                      enableDoubleSide={enableDoubleSide}
                       onMaxTotalCostChange={setMaxTotalCost}
                       onGridGapChange={setGridGap}
                       onOrderSizeChange={setOrderSize}
                       onEnableRebuyChange={setEnableRebuy}
+                      onEnableDoubleSideChange={setEnableDoubleSide}
                     />
                   )}
 

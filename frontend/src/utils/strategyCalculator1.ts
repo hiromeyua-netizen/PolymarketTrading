@@ -85,6 +85,53 @@ function getCurrentGridLevel(currentPrice: number, gridLevels: number[]): number
 }
 
 /**
+ * Determine which side (UP or DOWN) reaches a grid level first
+ * Returns 'up' if UP token reaches first, 'down' if DOWN token reaches first, or null if neither reaches
+ */
+function getFirstSideToReachGridLevel(priceData: PriceData[], gridLevels: number[]): 'up' | 'down' | null {
+  for (let i = 0; i < priceData.length; i++) {
+    const data = priceData[i]
+    const upPriceCents = Math.round(data.upTokenPrice * 100)
+    const downPriceCents = Math.round(data.downTokenPrice * 100)
+    
+    let upReaches = false
+    let downReaches = false
+    
+    // Check if UP price matches any grid level
+    for (const gridLevel of gridLevels) {
+      if (upPriceCents === gridLevel) {
+        upReaches = true
+        break
+      }
+    }
+    
+    // Check if DOWN price matches any grid level
+    for (const gridLevel of gridLevels) {
+      if (downPriceCents === gridLevel) {
+        downReaches = true
+        break
+      }
+    }
+    
+    // If both reach at the same time, prioritize UP
+    if (upReaches && downReaches) {
+      return 'up'
+    }
+    
+    // If only one reaches, return that side
+    if (upReaches) {
+      return 'up'
+    }
+    
+    if (downReaches) {
+      return 'down'
+    }
+  }
+  
+  return null
+}
+
+/**
  * Process a single token (UP or DOWN) through the strategy
  */
 function processToken(
@@ -266,7 +313,8 @@ export function calculateGridHedgeStrategy(
   maxTotalCost: number = 0.97,
   gridGap: number = 5,
   orderSize: number = 1,
-  enableRebuy: boolean = true
+  enableRebuy: boolean = true,
+  enableDoubleSide: boolean = true
 ): StrategyResult {
   if (priceData.length === 0) {
     return {
@@ -283,9 +331,33 @@ export function calculateGridHedgeStrategy(
   // Get grid levels
   const gridLevels = getGridLevels(gridGap, maxTotalCost)
 
-  // Process both UP and DOWN tokens
-  const upStates = processToken(priceData, 'up', gridLevels, orderSize, maxTotalCost, enableRebuy)
-  const downStates = processToken(priceData, 'down', gridLevels, orderSize, maxTotalCost, enableRebuy)
+  // Determine which side to process if double side is disabled
+  let processUp = true
+  let processDown = true
+  
+  if (!enableDoubleSide) {
+    const firstSide = getFirstSideToReachGridLevel(priceData, gridLevels)
+    if (firstSide === 'up') {
+      processUp = true
+      processDown = false
+    } else if (firstSide === 'down') {
+      processUp = false
+      processDown = true
+    } else {
+      // If neither reaches a grid level, default to processing both (or could default to 'up')
+      processUp = true
+      processDown = false
+    }
+  }
+
+  // Process UP and/or DOWN tokens based on enableDoubleSide
+  const upStates = processUp 
+    ? processToken(priceData, 'up', gridLevels, orderSize, maxTotalCost, enableRebuy)
+    : gridLevels.map(() => ({ hasEntered: false, hedgeFilled: false, lastGridLevelCrossed: null, orderPairs: [] }))
+  
+  const downStates = processDown
+    ? processToken(priceData, 'down', gridLevels, orderSize, maxTotalCost, enableRebuy)
+    : gridLevels.map(() => ({ hasEntered: false, hedgeFilled: false, lastGridLevelCrossed: null, orderPairs: [] }))
 
   // Combine order points from both tokens
   const orderPoints: { [key: string]: OrderPair[] } = {}

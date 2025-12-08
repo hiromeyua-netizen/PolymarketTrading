@@ -12,6 +12,7 @@ import { calculatePrePurchasedSellStrategy, PriceData as PriceData2 } from '../u
  *   - gridGap: number (default: 5)
  *   - orderSize: number (default: 1)
  *   - enableRebuy: boolean (default: true)
+ *   - enableDoubleSide: boolean (default: true)
  *   - count: number (optional) - number of latest slugs to calculate (default: all slugs)
  */
 export const calculateTotalProfit = async (req: Request, res: Response): Promise<void> => {
@@ -28,6 +29,9 @@ export const calculateTotalProfit = async (req: Request, res: Response): Promise
       : 1;
     const enableRebuy = req.query.enableRebuy !== undefined
       ? req.query.enableRebuy === 'true' || req.query.enableRebuy === '1'
+      : true;
+    const enableDoubleSide = req.query.enableDoubleSide !== undefined
+      ? req.query.enableDoubleSide === 'true' || req.query.enableDoubleSide === '1'
       : true;
     const count = req.query.count 
       ? parseInt(req.query.count as string, 10) 
@@ -157,7 +161,8 @@ export const calculateTotalProfit = async (req: Request, res: Response): Promise
           maxTotalCost,
           gridGap,
           orderSize,
-          enableRebuy
+          enableRebuy,
+          enableDoubleSide
         );
 
         // Accumulate totals
@@ -196,6 +201,7 @@ export const calculateTotalProfit = async (req: Request, res: Response): Promise
         gridGap,
         orderSize,
         enableRebuy,
+        enableDoubleSide,
         count: count || null,
       },
       results,

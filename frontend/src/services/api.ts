@@ -57,6 +57,7 @@ export interface TotalProfitResponse {
     maxTotalCost: number
     gridGap: number
     orderSize: number
+    enableRebuy: boolean
     count: number | null
   }
   results: Array<{
@@ -73,12 +74,14 @@ export const fetchTotalProfit = async (
   maxTotalCost: number,
   gridGap: number,
   orderSize: number,
-  count?: number
+  count?: number,
+  enableRebuy: boolean = true
 ): Promise<TotalProfitResponse> => {
   const params = new URLSearchParams()
   params.append('maxTotalCost', maxTotalCost.toString())
   params.append('gridGap', gridGap.toString())
   params.append('orderSize', orderSize.toString())
+  params.append('enableRebuy', enableRebuy.toString())
   if (count !== undefined) {
     params.append('count', count.toString())
   }

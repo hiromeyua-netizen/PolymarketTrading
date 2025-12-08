@@ -6,9 +6,11 @@ interface Strategy1ResultsProps {
   maxTotalCost: number
   gridGap: number
   orderSize: number
+  enableRebuy: boolean
   onMaxTotalCostChange: (value: number) => void
   onGridGapChange: (value: number) => void
   onOrderSizeChange: (value: number) => void
+  onEnableRebuyChange: (value: boolean) => void
 }
 
 export default function Strategy1Results({
@@ -16,9 +18,11 @@ export default function Strategy1Results({
   maxTotalCost,
   gridGap,
   orderSize,
+  enableRebuy,
   onMaxTotalCostChange,
   onGridGapChange,
-  onOrderSizeChange
+  onOrderSizeChange,
+  onEnableRebuyChange
 }: Strategy1ResultsProps) {
   const [expandedLevels, setExpandedLevels] = useState<Set<number>>(new Set())
 
@@ -69,6 +73,24 @@ export default function Strategy1Results({
             value={orderSize}
             onChange={(e) => onOrderSizeChange(parseFloat(e.target.value) || 1)}
           />
+        </label>
+      </div>
+      <div className="toggle-container">
+        <label className="toggle-label" htmlFor="enable-rebuy-toggle">
+          <div className="toggle-label-content">
+            <div className="toggle-title">Enable Rebuy</div>
+            <div className="toggle-description">Allow re-entry at grid levels after hedge is filled</div>
+          </div>
+          <div className="toggle-switch">
+            <input
+              type="checkbox"
+              id="enable-rebuy-toggle"
+              checked={enableRebuy}
+              onChange={(e) => onEnableRebuyChange(e.target.checked)}
+              className="toggle-input"
+            />
+            <span className="toggle-slider"></span>
+          </div>
         </label>
       </div>
       <div className="strategy-stats">

@@ -92,7 +92,8 @@ export interface PriceData {
     tokenType: 'up' | 'down',
     gridLevels: number[],
     orderSize: number,
-    maxTotalCost: number
+    maxTotalCost: number,
+    enableRebuy: boolean = true
   ): GridLevelState[] {
     // Initialize state for each grid level
     const gridStates: Map<number, GridLevelState> = new Map()
@@ -140,9 +141,9 @@ export interface PriceData {
             if (reachedFromBelow) {
               // Check if we should enter:
               // 1. First entry: always enter
-              // 2. Re-entry: only if hedge was previously filled
-              const shouldEnter = !state.hasEntered || state.hedgeFilled
-  
+              // 2. Re-entry: only if enableRebuy is true and hedge was previously filled
+              const shouldEnter = !state.hasEntered || (enableRebuy && state.hedgeFilled)
+
               if (shouldEnter) {
                 // Calculate hedge price (in cents, then convert to decimal)
                 const entryPriceCents = gridLevel
@@ -184,12 +185,13 @@ export interface PriceData {
         // First time reaching a grid level - assume crossed from below
         const gridLevel = currentGridLevel
         const state = gridStates.get(gridLevel)!
-  
+
         // Check if we should enter (first entry)
-        if (!state.hasEntered || state.hedgeFilled) {
-          const shouldEnter = !state.hasEntered || state.hedgeFilled
-  
-          if (shouldEnter) {
+        // 1. First entry: always enter
+        // 2. Re-entry: only if enableRebuy is true and hedge was previously filled
+        const shouldEnter = !state.hasEntered || (enableRebuy && state.hedgeFilled)
+
+        if (shouldEnter) {
             // Calculate hedge price (in cents, then convert to decimal)
             const entryPriceCents = gridLevel
             const hedgePriceCents = Math.max(0, maxTotalCost - entryPriceCents)
@@ -222,7 +224,6 @@ export interface PriceData {
   
             state.hasEntered = true
           }
-        }
       }
   
       // Check if any hedge orders should be filled
@@ -264,7 +265,8 @@ export interface PriceData {
     priceData: PriceData[],
     maxTotalCost: number = 0.97,
     gridGap: number = 5,
-    orderSize: number = 1
+    orderSize: number = 1,
+    enableRebuy: boolean = true
   ): StrategyResult {
     if (priceData.length === 0) {
       return {
@@ -280,10 +282,10 @@ export interface PriceData {
   
     // Get grid levels
     const gridLevels = getGridLevels(gridGap, maxTotalCost)
-  
+
     // Process both UP and DOWN tokens
-    const upStates = processToken(priceData, 'up', gridLevels, orderSize, maxTotalCost)
-    const downStates = processToken(priceData, 'down', gridLevels, orderSize, maxTotalCost)
+    const upStates = processToken(priceData, 'up', gridLevels, orderSize, maxTotalCost, enableRebuy)
+    const downStates = processToken(priceData, 'down', gridLevels, orderSize, maxTotalCost, enableRebuy)
   
     // Combine order points from both tokens
     const orderPoints: { [key: string]: OrderPair[] } = {}

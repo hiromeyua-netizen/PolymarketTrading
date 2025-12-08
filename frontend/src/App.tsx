@@ -31,6 +31,7 @@ function App() {
   const [gridGap, setGridGap] = useState<number>(5)
   const [orderSize, setOrderSize] = useState<number>(1)
   const [count, setCount] = useState<number | undefined>(undefined)
+  const [enableRebuy, setEnableRebuy] = useState<boolean>(true)
   
   // Strategy 2 calculation parameters
   const [targetTotal, setTargetTotal] = useState<number>(105)
@@ -44,8 +45,8 @@ function App() {
 
   // Calculate strategy 1 results
   useEffect(() => {
-    setStrategyResult(calculateGridHedgeStrategy(priceData, maxTotalCost, gridGap, orderSize))
-  }, [priceData, maxTotalCost, gridGap, orderSize])
+    setStrategyResult(calculateGridHedgeStrategy(priceData, maxTotalCost, gridGap, orderSize, enableRebuy))
+  }, [priceData, maxTotalCost, gridGap, orderSize, enableRebuy])
 
   // Calculate strategy 2 results
   useEffect(() => {
@@ -121,10 +122,12 @@ function App() {
               gridGap={gridGap}
               orderSize={orderSize}
               count={count}
+              enableRebuy={enableRebuy}
               onMaxTotalCostChange={setMaxTotalCost}
               onGridGapChange={setGridGap}
               onOrderSizeChange={setOrderSize}
               onCountChange={setCount}
+              onEnableRebuyChange={setEnableRebuy}
             />
           )}
 
@@ -153,9 +156,11 @@ function App() {
                       maxTotalCost={maxTotalCost}
                       gridGap={gridGap}
                       orderSize={orderSize}
+                      enableRebuy={enableRebuy}
                       onMaxTotalCostChange={setMaxTotalCost}
                       onGridGapChange={setGridGap}
                       onOrderSizeChange={setOrderSize}
+                      onEnableRebuyChange={setEnableRebuy}
                     />
                   )}
 

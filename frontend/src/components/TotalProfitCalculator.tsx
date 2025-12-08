@@ -6,10 +6,12 @@ interface TotalProfitCalculatorProps {
   gridGap: number
   orderSize: number
   count: number | undefined
+  enableRebuy: boolean
   onMaxTotalCostChange: (value: number) => void
   onGridGapChange: (value: number) => void
   onOrderSizeChange: (value: number) => void
   onCountChange: (value: number | undefined) => void
+  onEnableRebuyChange: (value: boolean) => void
 }
 
 export default function TotalProfitCalculator({
@@ -17,10 +19,12 @@ export default function TotalProfitCalculator({
   gridGap,
   orderSize,
   count,
+  enableRebuy,
   onMaxTotalCostChange,
   onGridGapChange,
   onOrderSizeChange,
-  onCountChange
+  onCountChange,
+  onEnableRebuyChange
 }: TotalProfitCalculatorProps) {
   const [totalProfitData, setTotalProfitData] = useState<TotalProfitResponse | null>(null)
   const [loadingTotalProfit, setLoadingTotalProfit] = useState<boolean>(false)
@@ -30,7 +34,7 @@ export default function TotalProfitCalculator({
     setLoadingTotalProfit(true)
     setTotalProfitError(null)
     try {
-      const response = await fetchTotalProfit(maxTotalCost, gridGap, orderSize, count)
+      const response = await fetchTotalProfit(maxTotalCost, gridGap, orderSize, count, enableRebuy)
       setTotalProfitData(response)
     } catch (err) {
       setTotalProfitError('Failed to calculate total profit')
@@ -87,14 +91,33 @@ export default function TotalProfitCalculator({
             onChange={(e) => onCountChange(e.target.value ? parseInt(e.target.value) || undefined : undefined)}
           />
         </label>
-        <button 
-          className="calculate-total-profit-btn"
-          onClick={handleCalculateTotalProfit}
-          disabled={loadingTotalProfit}
-        >
-          {loadingTotalProfit ? 'Calculating...' : 'Calculate Total Profit'}
-        </button>
       </div>
+      <div className="toggle-container">
+        <label className="toggle-label" htmlFor="enable-rebuy-toggle-total">
+          <div className="toggle-label-content">
+            <div className="toggle-title">Enable Rebuy</div>
+            <div className="toggle-description">Allow re-entry at grid levels after hedge is filled</div>
+          </div>
+          <div className="toggle-switch">
+            <input
+              type="checkbox"
+              id="enable-rebuy-toggle-total"
+              checked={enableRebuy}
+              onChange={(e) => onEnableRebuyChange(e.target.checked)}
+              className="toggle-input"
+            />
+            <span className="toggle-slider"></span>
+          </div>
+        </label>
+      </div>
+      <button 
+        className="calculate-total-profit-btn"
+        onClick={handleCalculateTotalProfit}
+        disabled={loadingTotalProfit}
+        style={{ marginTop: '15px' }}
+      >
+        {loadingTotalProfit ? 'Calculating...' : 'Calculate Total Profit'}
+      </button>
 
       {totalProfitError && (
         <div className="error-message">

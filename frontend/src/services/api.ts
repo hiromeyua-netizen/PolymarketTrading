@@ -2,9 +2,15 @@ import axios from 'axios'
 
 const API_BASE_URL = '/api'
 
+export interface SlugWithOutcome {
+  slug: string
+  outcome: 'UP' | 'DOWN' | null
+}
+
 export interface SlugResponse {
   count: number
   slugs: string[]
+  slugsWithOutcome?: SlugWithOutcome[]
 }
 
 export interface PriceData {
@@ -21,18 +27,32 @@ export interface PriceHistoryResponse {
   data: PriceData[]
 }
 
-export const fetchAllSlugs = async (): Promise<SlugResponse> => {
-  const response = await axios.get<SlugResponse>(`${API_BASE_URL}/slugs`)
+export const fetchAllSlugs = async (
+  token?: string,
+  eventType?: string
+): Promise<SlugResponse> => {
+  const params = new URLSearchParams()
+  if (token) params.append('token', token)
+  if (eventType) params.append('eventType', eventType)
+  
+  const queryString = params.toString()
+  const url = `${API_BASE_URL}/slugs${queryString ? `?${queryString}` : ''}`
+  
+  const response = await axios.get<SlugResponse>(url)
   return response.data
 }
 
 export const fetchPriceHistory = async (
   slug: string,
+  token?: string,
+  eventType?: string,
   startDate?: string,
   endDate?: string,
   limit?: number
 ): Promise<PriceHistoryResponse> => {
   const params = new URLSearchParams()
+  if (token) params.append('token', token)
+  if (eventType) params.append('eventType', eventType)
   if (startDate) params.append('startDate', startDate)
   if (endDate) params.append('endDate', endDate)
   if (limit) params.append('limit', limit.toString())
@@ -59,6 +79,8 @@ export interface TotalProfitResponse {
     orderSize: number
     enableRebuy: boolean
     enableDoubleSide: boolean
+    token: string | null
+    eventType: string | null
     count: number | null
   }
   results: Array<{
@@ -77,7 +99,9 @@ export const fetchTotalProfit = async (
   orderSize: number,
   count?: number,
   enableRebuy: boolean = true,
-  enableDoubleSide: boolean = true
+  enableDoubleSide: boolean = true,
+  token?: string,
+  eventType?: string
 ): Promise<TotalProfitResponse> => {
   const params = new URLSearchParams()
   params.append('maxTotalCost', maxTotalCost.toString())
@@ -85,6 +109,8 @@ export const fetchTotalProfit = async (
   params.append('orderSize', orderSize.toString())
   params.append('enableRebuy', enableRebuy.toString())
   params.append('enableDoubleSide', enableDoubleSide.toString())
+  if (token) params.append('token', token)
+  if (eventType) params.append('eventType', eventType)
   if (count !== undefined) {
     params.append('count', count.toString())
   }

@@ -5,7 +5,7 @@ import { logger } from '../utils/logger';
 export const getPriceHistoryBySlug = async (req: Request, res: Response): Promise<void> => {
   try {
     const { slug } = req.params;
-    const { startDate, endDate, limit } = req.query;
+    const { startDate, endDate, limit, token, eventType } = req.query;
 
     if (!slug) {
       res.status(400).json({ error: 'Slug parameter is required' });
@@ -14,6 +14,16 @@ export const getPriceHistoryBySlug = async (req: Request, res: Response): Promis
 
     // Build query
     const query: any = { slug };
+
+    // Add token filter if provided
+    if (token) {
+      query.token = token;
+    }
+
+    // Add eventType filter if provided
+    if (eventType) {
+      query.eventType = eventType;
+    }
 
     // Add date range filters if provided
     if (startDate || endDate) {
@@ -91,20 +101,33 @@ export const getLatestPriceBySlug = async (req: Request, res: Response): Promise
 
 export const getAllSlugs = async (req: Request, res: Response): Promise<void> => {
   try {
-    // Get distinct slugs from the database
-    const slugs = await TokenPriceHistory.distinct('slug');
+    const { token, eventType } = req.query;
 
-    // Get the latest timestamp for each slug and sort by it
+    // Build query for filtering
+    const query: any = {};
+    if (token) {
+      query.token = token;
+    }
+    if (eventType) {
+      query.eventType = eventType;
+    }
+
+    // Get distinct slugs from the database with filters
+    const slugs = await TokenPriceHistory.distinct('slug', query);
+
+    // Get the latest timestamp and outcome for each slug and sort by it
     const slugsWithLatestTimestamp = await Promise.all(
       slugs.map(async (slug) => {
+        const slugQuery: any = { slug, ...query };
         const latestPrice = await TokenPriceHistory.findOne(
-          { slug },
-          { timestamp: 1 },
+          slugQuery,
+          { timestamp: 1, outcome: 1 },
           { sort: { timestamp: -1 } }
         );
         return {
           slug,
           latestTimestamp: latestPrice?.timestamp || new Date(0), // Use epoch if no data found
+          outcome: latestPrice?.outcome || null,
         };
       })
     );
@@ -116,12 +139,16 @@ export const getAllSlugs = async (req: Request, res: Response): Promise<void> =>
       return timeB - timeA; // Descending order
     });
 
-    // Extract sorted slugs
-    const sortedSlugs = slugsWithLatestTimestamp.map(item => item.slug);
+    // Extract sorted slugs with outcome
+    const sortedSlugs = slugsWithLatestTimestamp.map(item => ({
+      slug: item.slug,
+      outcome: item.outcome,
+    }));
 
     res.json({
       count: sortedSlugs.length,
-      slugs: sortedSlugs,
+      slugs: sortedSlugs.map(item => item.slug),
+      slugsWithOutcome: sortedSlugs,
     });
   } catch (error) {
     logger.error('Error fetching all slugs:', error);

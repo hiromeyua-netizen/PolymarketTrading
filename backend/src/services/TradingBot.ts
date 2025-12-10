@@ -30,8 +30,12 @@ export class TradingBot {
     private secondOrderCount: number = 0;
     private redisService = getRedisService();
     private currentSlug: string | null = null;
+    private coinSymbol: CoinSymbol;
+    private marketInterval: MarketInterval;
 
     constructor(symbol: CoinSymbol, marketInterval: MarketInterval) {
+        this.coinSymbol = symbol;
+        this.marketInterval = marketInterval;
         this.userMonitor = new UserMonitor();
         this.marketMonitor = new MarketMonitor(symbol, marketInterval);
         this.initClobClient();
@@ -247,12 +251,22 @@ export class TradingBot {
                 if (tokenPrices.length > 0) {
                     logger.info(`Saving ${tokenPrices.length} token prices to MongoDB for slug: ${previousSlug}`);
                     
+                    // Extract token symbol from CoinSymbol (e.g., "btc/usd" -> "BTC")
+                    const tokenSymbol = this.coinSymbol.split('/')[0].toUpperCase();
+                    
+                    // Convert MarketInterval to eventType
+                    const eventType = this.marketInterval === MarketInterval.HOURLY ? 'hourly' : '15min';
+                    
                     // Batch save to MongoDB
+                    // Determine outcome for each record based on which token price is higher at that timestamp
                     const documents = tokenPrices.map(price => ({
                         slug: price.slug,
                         timestamp: new Date(price.timestamp),
                         upTokenPrice: price.upTokenPrice,
                         downTokenPrice: price.downTokenPrice,
+                        token: tokenSymbol,
+                        eventType: eventType,
+                        outcome: price.upTokenPrice > price.downTokenPrice ? 'UP' : 'DOWN' as 'UP' | 'DOWN',
                     }));
 
                     await TokenPriceHistory.insertMany(documents);

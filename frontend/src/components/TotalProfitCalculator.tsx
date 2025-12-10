@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { TotalProfitResponse, fetchTotalProfit } from '../services/api'
+import { CoinSymbol } from './CoinSymbolSelector'
+import { MarketInterval } from './MarketIntervalSelector'
 
 interface TotalProfitCalculatorProps {
   maxTotalCost: number
@@ -8,6 +10,8 @@ interface TotalProfitCalculatorProps {
   count: number | undefined
   enableRebuy: boolean
   enableDoubleSide: boolean
+  selectedCoin: CoinSymbol
+  selectedInterval: MarketInterval
   onMaxTotalCostChange: (value: number) => void
   onGridGapChange: (value: number) => void
   onOrderSizeChange: (value: number) => void
@@ -23,6 +27,8 @@ export default function TotalProfitCalculator({
   count,
   enableRebuy,
   enableDoubleSide,
+  selectedCoin,
+  selectedInterval,
   onMaxTotalCostChange,
   onGridGapChange,
   onOrderSizeChange,
@@ -38,7 +44,7 @@ export default function TotalProfitCalculator({
     setLoadingTotalProfit(true)
     setTotalProfitError(null)
     try {
-      const response = await fetchTotalProfit(maxTotalCost, gridGap, orderSize, count, enableRebuy, enableDoubleSide)
+      const response = await fetchTotalProfit(maxTotalCost, gridGap, orderSize, count, enableRebuy, enableDoubleSide, selectedCoin, selectedInterval)
       setTotalProfitData(response)
     } catch (err) {
       setTotalProfitError('Failed to calculate total profit')

@@ -1,13 +1,30 @@
 import './SlugSelector.css'
+import { SlugWithOutcome } from '../services/api'
 
 interface SlugSelectorProps {
   slugs: string[]
+  slugsWithOutcome: SlugWithOutcome[]
   selectedSlug: string
   onSlugChange: (slug: string) => void
   loading: boolean
 }
 
-const SlugSelector = ({ slugs, selectedSlug, onSlugChange, loading }: SlugSelectorProps) => {
+const SlugSelector = ({ slugs, slugsWithOutcome, selectedSlug, onSlugChange, loading }: SlugSelectorProps) => {
+  // Create a map for quick lookup of outcome by slug
+  const outcomeMap = new Map<string, 'UP' | 'DOWN' | null>()
+  slugsWithOutcome.forEach(item => {
+    outcomeMap.set(item.slug, item.outcome)
+  })
+
+  const getOutcomeDisplay = (slug: string): string => {
+    const outcome = outcomeMap.get(slug)
+    if (outcome === 'UP') return '🟢 UP'
+    if (outcome === 'DOWN') return '🔴 DOWN'
+    return ''
+  }
+
+  const selectedOutcome = selectedSlug ? outcomeMap.get(selectedSlug) : null
+
   return (
     <div className="slug-selector">
       <label htmlFor="slug-select" className="slug-label">
@@ -21,15 +38,25 @@ const SlugSelector = ({ slugs, selectedSlug, onSlugChange, loading }: SlugSelect
         className="slug-select"
       >
         <option value="">-- Select a slug --</option>
-        {slugs.map((slug) => (
-          <option key={slug} value={slug}>
-            {slug}
-          </option>
-        ))}
+        {slugs.map((slug) => {
+          const outcomeDisplay = getOutcomeDisplay(slug)
+          return (
+            <option key={slug} value={slug}>
+              {slug} {outcomeDisplay && `(${outcomeDisplay})`}
+            </option>
+          )
+        })}
       </select>
-      {slugs.length > 0 && (
-        <span className="slug-count">{slugs.length} slug(s) available</span>
-      )}
+      <div className="slug-info">
+        {slugs.length > 0 && (
+          <span className="slug-count">{slugs.length} slug(s) available</span>
+        )}
+        {selectedSlug && selectedOutcome && (
+          <span className={`outcome-badge outcome-${selectedOutcome.toLowerCase()}`}>
+            Outcome: {selectedOutcome}
+          </span>
+        )}
+      </div>
     </div>
   )
 }

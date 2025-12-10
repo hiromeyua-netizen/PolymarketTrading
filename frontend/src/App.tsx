@@ -6,7 +6,9 @@ import Strategy1Results from './components/Strategy1Results'
 import Strategy2Results from './components/Strategy2Results'
 import TotalProfitCalculator from './components/TotalProfitCalculator'
 import TotalProfitCalculator2 from './components/TotalProfitCalculator2'
-import { fetchAllSlugs, fetchPriceHistory } from './services/api'
+import CoinSymbolSelector, { CoinSymbol } from './components/CoinSymbolSelector'
+import MarketIntervalSelector, { MarketInterval } from './components/MarketIntervalSelector'
+import { fetchAllSlugs, fetchPriceHistory, SlugWithOutcome } from './services/api'
 import { calculateGridHedgeStrategy, StrategyResult as Strategy1Result } from './utils/strategyCalculator1'
 import { calculatePrePurchasedSellStrategy, StrategyResult as Strategy2Result } from './utils/strategyCalculator2'
 import './App.css'
@@ -21,10 +23,13 @@ interface PriceData {
 
 function App() {
   const [slugs, setSlugs] = useState<string[]>([])
+  const [slugsWithOutcome, setSlugsWithOutcome] = useState<SlugWithOutcome[]>([])
   const [selectedSlug, setSelectedSlug] = useState<string>('')
   const [priceData, setPriceData] = useState<PriceData[]>([])
   const [loading, setLoading] = useState<boolean>(false)
   const [error, setError] = useState<string | null>(null)
+  const [selectedCoin, setSelectedCoin] = useState<CoinSymbol>('BTC')
+  const [selectedInterval, setSelectedInterval] = useState<MarketInterval>('hourly')
 
   // Strategy 1 calculation parameters
   const [maxTotalCost, setMaxTotalCost] = useState<number>(97)
@@ -56,7 +61,7 @@ function App() {
 
   useEffect(() => {
     loadSlugs()
-  }, [])
+  }, [selectedCoin, selectedInterval])
 
   useEffect(() => {
     if (selectedSlug) {
@@ -64,12 +69,15 @@ function App() {
     } else {
       setPriceData([])
     }
-  }, [selectedSlug])
+  }, [selectedSlug, selectedCoin, selectedInterval])
 
   const loadSlugs = async () => {
     try {
-      const response = await fetchAllSlugs()
+      const response = await fetchAllSlugs(selectedCoin, selectedInterval)
       setSlugs(response.slugs)
+      setSlugsWithOutcome(response.slugsWithOutcome || [])
+      // Reset selected slug when filters change
+      setSelectedSlug('')
     } catch (err) {
       setError('Failed to load slugs')
       console.error('Error loading slugs:', err)
@@ -80,7 +88,7 @@ function App() {
     setLoading(true)
     setError(null)
     try {
-      const response = await fetchPriceHistory(slug)
+      const response = await fetchPriceHistory(slug, selectedCoin, selectedInterval)
       setPriceData(response.data)
     } catch (err) {
       setError('Failed to load price data')
@@ -99,8 +107,19 @@ function App() {
         </header>
 
         <div className="content">
+          <div className="filters-section">
+            <CoinSymbolSelector
+              selectedCoin={selectedCoin}
+              onCoinChange={setSelectedCoin}
+            />
+            <MarketIntervalSelector
+              selectedInterval={selectedInterval}
+              onIntervalChange={setSelectedInterval}
+            />
+          </div>
           <SlugSelector
             slugs={slugs}
+            slugsWithOutcome={slugsWithOutcome}
             selectedSlug={selectedSlug}
             onSlugChange={setSelectedSlug}
             loading={loading}
@@ -125,6 +144,8 @@ function App() {
               count={count}
               enableRebuy={enableRebuy}
               enableDoubleSide={enableDoubleSide}
+              selectedCoin={selectedCoin}
+              selectedInterval={selectedInterval}
               onMaxTotalCostChange={setMaxTotalCost}
               onGridGapChange={setGridGap}
               onOrderSizeChange={setOrderSize}

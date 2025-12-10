@@ -1,0 +1,38 @@
+.coin-symbol-selector {
+  margin: 10px 0;
+}
+
+.coin-symbol-selector label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.9rem;
+  color: #666;
+  font-weight: 500;
+}
+
+.selector-label {
+  min-width: 100px;
+}
+
+.coin-select {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 120px;
+}
+
+.coin-select:hover {
+  border-color: #667eea;
+}
+
+.coin-select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+

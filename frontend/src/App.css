@@ -123,6 +123,17 @@
   font-size: 1.2rem;
 }
 
+.filters-section {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+}
+
 .strategy-params {
   display: flex;
   gap: 20px;

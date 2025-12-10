@@ -13,6 +13,8 @@ import { calculatePrePurchasedSellStrategy, PriceData as PriceData2 } from '../u
  *   - orderSize: number (default: 1)
  *   - enableRebuy: boolean (default: true)
  *   - enableDoubleSide: boolean (default: true)
+ *   - token: string (optional) - filter by coin symbol (BTC, ETH, SOL, XRP)
+ *   - eventType: string (optional) - filter by event type (hourly, 15min)
  *   - count: number (optional) - number of latest slugs to calculate (default: all slugs)
  */
 export const calculateTotalProfit = async (req: Request, res: Response): Promise<void> => {
@@ -33,6 +35,8 @@ export const calculateTotalProfit = async (req: Request, res: Response): Promise
     const enableDoubleSide = req.query.enableDoubleSide !== undefined
       ? req.query.enableDoubleSide === 'true' || req.query.enableDoubleSide === '1'
       : true;
+    const token = req.query.token as string | undefined;
+    const eventType = req.query.eventType as string | undefined;
     const count = req.query.count 
       ? parseInt(req.query.count as string, 10) 
       : undefined;
@@ -70,8 +74,17 @@ export const calculateTotalProfit = async (req: Request, res: Response): Promise
       return;
     }
 
-    // Get all distinct slugs
-    const allSlugs = await TokenPriceHistory.distinct('slug');
+    // Build query for filtering slugs
+    const slugQuery: any = {};
+    if (token) {
+      slugQuery.token = token;
+    }
+    if (eventType) {
+      slugQuery.eventType = eventType;
+    }
+
+    // Get all distinct slugs with filters
+    const allSlugs = await TokenPriceHistory.distinct('slug', slugQuery);
 
     if (allSlugs.length === 0) {
       res.json({
@@ -90,8 +103,9 @@ export const calculateTotalProfit = async (req: Request, res: Response): Promise
     // Get slugs sorted by latest timestamp (most recent first)
     const slugsWithLatestTimestamp = await Promise.all(
       allSlugs.map(async (slug) => {
+        const query: any = { slug, ...slugQuery };
         const latestPrice = await TokenPriceHistory.findOne(
-          { slug },
+          query,
           { timestamp: 1 },
           { sort: { timestamp: -1 } }
         );
@@ -134,8 +148,11 @@ export const calculateTotalProfit = async (req: Request, res: Response): Promise
 
     for (const slug of slugs) {
       try {
+        // Build query for price history
+        const priceHistoryQuery: any = { slug, ...slugQuery };
+        
         // Get price history for this slug
-        const priceHistory = await TokenPriceHistory.find({ slug })
+        const priceHistory = await TokenPriceHistory.find(priceHistoryQuery)
           .sort({ timestamp: 1 })
           .exec();
 
@@ -202,6 +219,8 @@ export const calculateTotalProfit = async (req: Request, res: Response): Promise
         orderSize,
         enableRebuy,
         enableDoubleSide,
+        token: token || null,
+        eventType: eventType || null,
         count: count || null,
       },
       results,

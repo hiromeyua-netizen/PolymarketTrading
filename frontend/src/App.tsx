@@ -161,6 +161,8 @@ function App() {
               sellThreshold={sellThreshold}
               orderSize={orderSize}
               count={count}
+              selectedCoin={selectedCoin}
+              selectedInterval={selectedInterval}
               onTargetTotalChange={setTargetTotal}
               onSellThresholdChange={setSellThreshold}
               onOrderSizeChange={setOrderSize}

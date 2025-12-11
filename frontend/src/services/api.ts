@@ -130,6 +130,8 @@ export interface TotalProfit2Response {
     targetTotal: number
     sellThreshold: number
     orderSize: number
+    token: string | null
+    eventType: string | null
     count: number | null
   }
   results: Array<{
@@ -144,12 +146,16 @@ export const fetchTotalProfit2 = async (
   targetTotal: number,
   sellThreshold: number,
   orderSize: number,
-  count?: number
+  count?: number,
+  token?: string,
+  eventType?: string
 ): Promise<TotalProfit2Response> => {
   const params = new URLSearchParams()
   params.append('targetTotal', targetTotal.toString())
   params.append('sellThreshold', sellThreshold.toString())
   params.append('orderSize', orderSize.toString())
+  if (token) params.append('token', token)
+  if (eventType) params.append('eventType', eventType)
   if (count !== undefined) {
     params.append('count', count.toString())
   }

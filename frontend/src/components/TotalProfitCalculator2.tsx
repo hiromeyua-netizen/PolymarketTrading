@@ -1,11 +1,15 @@
 import { useState } from 'react'
 import { TotalProfit2Response, fetchTotalProfit2 } from '../services/api'
+import { CoinSymbol } from './CoinSymbolSelector'
+import { MarketInterval } from './MarketIntervalSelector'
 
 interface TotalProfitCalculator2Props {
   targetTotal: number
   sellThreshold: number
   orderSize: number
   count: number | undefined
+  selectedCoin: CoinSymbol
+  selectedInterval: MarketInterval
   onTargetTotalChange: (value: number) => void
   onSellThresholdChange: (value: number) => void
   onOrderSizeChange: (value: number) => void
@@ -17,6 +21,8 @@ export default function TotalProfitCalculator2({
   sellThreshold,
   orderSize,
   count,
+  selectedCoin,
+  selectedInterval,
   onTargetTotalChange,
   onSellThresholdChange,
   onOrderSizeChange,
@@ -30,7 +36,7 @@ export default function TotalProfitCalculator2({
     setLoadingTotalProfit(true)
     setTotalProfitError(null)
     try {
-      const response = await fetchTotalProfit2(targetTotal, sellThreshold, orderSize, count)
+      const response = await fetchTotalProfit2(targetTotal, sellThreshold, orderSize, count, selectedCoin, selectedInterval)
       setTotalProfitData(response)
     } catch (err) {
       setTotalProfitError('Failed to calculate total profit')

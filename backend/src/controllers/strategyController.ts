@@ -238,6 +238,8 @@ export const calculateTotalProfit = async (req: Request, res: Response): Promise
  *   - targetTotal: number (default: 105) - in cents
  *   - sellThreshold: number (default: 65) - in cents
  *   - orderSize: number (default: 1)
+ *   - token: string (optional) - filter by coin symbol (BTC, ETH, SOL, XRP)
+ *   - eventType: string (optional) - filter by event type (hourly, 15min)
  *   - count: number (optional) - number of latest slugs to calculate (default: all slugs)
  */
 export const calculateTotalProfit2 = async (req: Request, res: Response): Promise<void> => {
@@ -252,6 +254,8 @@ export const calculateTotalProfit2 = async (req: Request, res: Response): Promis
     const orderSize = req.query.orderSize 
       ? parseFloat(req.query.orderSize as string) 
       : 1;
+    const token = req.query.token as string | undefined;
+    const eventType = req.query.eventType as string | undefined;
     const count = req.query.count 
       ? parseInt(req.query.count as string, 10) 
       : undefined;
@@ -289,8 +293,17 @@ export const calculateTotalProfit2 = async (req: Request, res: Response): Promis
       return;
     }
 
-    // Get all distinct slugs
-    const allSlugs = await TokenPriceHistory.distinct('slug');
+    // Build query for filtering slugs
+    const slugQuery: any = {};
+    if (token) {
+      slugQuery.token = token;
+    }
+    if (eventType) {
+      slugQuery.eventType = eventType;
+    }
+
+    // Get all distinct slugs with filters
+    const allSlugs = await TokenPriceHistory.distinct('slug', slugQuery);
 
     if (allSlugs.length === 0) {
       res.json({
@@ -309,8 +322,9 @@ export const calculateTotalProfit2 = async (req: Request, res: Response): Promis
     // Get slugs sorted by latest timestamp (most recent first)
     const slugsWithLatestTimestamp = await Promise.all(
       allSlugs.map(async (slug) => {
+        const query: any = { slug, ...slugQuery };
         const latestPrice = await TokenPriceHistory.findOne(
-          { slug },
+          query,
           { timestamp: 1 },
           { sort: { timestamp: -1 } }
         );
@@ -349,8 +363,11 @@ export const calculateTotalProfit2 = async (req: Request, res: Response): Promis
 
     for (const slug of slugs) {
       try {
+        // Build query for price history
+        const priceHistoryQuery: any = { slug, ...slugQuery };
+        
         // Get price history for this slug
-        const priceHistory = await TokenPriceHistory.find({ slug })
+        const priceHistory = await TokenPriceHistory.find(priceHistoryQuery)
           .sort({ timestamp: 1 })
           .exec();
 
@@ -407,6 +424,8 @@ export const calculateTotalProfit2 = async (req: Request, res: Response): Promis
         targetTotal,
         sellThreshold,
         orderSize,
+        token: token || null,
+        eventType: eventType || null,
         count: count || null,
       },
       results,

@@ -29,8 +29,8 @@ async function migrateTokenPriceHistory() {
       ]
     };
 
-    const documentsToUpdate = await TokenPriceHistory.find(query);
-    const totalCount = documentsToUpdate.length;
+    // Count total documents to update (for progress tracking)
+    const totalCount = await TokenPriceHistory.countDocuments(query);
 
     if (totalCount === 0) {
       logger.info('✅ No documents need migration. All documents already have token, eventType, and outcome fields.');
@@ -42,37 +42,62 @@ async function migrateTokenPriceHistory() {
 
     let updatedCount = 0;
     let errorCount = 0;
+    let processedCount = 0;
 
-    // Process in batches to avoid memory issues
+    // Process in batches using cursor to avoid loading all documents into memory
     const batchSize = 1000;
-    for (let i = 0; i < documentsToUpdate.length; i += batchSize) {
-      const batch = documentsToUpdate.slice(i, i + batchSize);
-      
-      const bulkOps = batch.map(doc => {
-        // Determine outcome based on price comparison
-        const outcome: 'UP' | 'DOWN' = doc.upTokenPrice > doc.downTokenPrice ? 'UP' : 'DOWN';
+    const cursor = TokenPriceHistory.find(query).lean().cursor({ batchSize: batchSize });
 
-        return {
-          updateOne: {
-            filter: { _id: doc._id },
-            update: {
-              $set: {
-                token: 'BTC',
-                eventType: '15min',
-                outcome: outcome,
-              }
+    let batch: any[] = [];
+    let batchNumber = 0;
+
+    for await (const doc of cursor) {
+      // Determine outcome based on price comparison
+      const outcome: 'UP' | 'DOWN' = doc.upTokenPrice > doc.downTokenPrice ? 'UP' : 'DOWN';
+
+      batch.push({
+        updateOne: {
+          filter: { _id: doc._id },
+          update: {
+            $set: {
+              token: 'BTC',
+              eventType: '15min',
+              outcome: outcome,
             }
           }
-        };
+        }
       });
 
+      // Process batch when it reaches batchSize
+      if (batch.length >= batchSize) {
+        batchNumber++;
+        try {
+          const result = await TokenPriceHistory.bulkWrite(batch);
+          updatedCount += result.modifiedCount;
+          processedCount += batch.length;
+          logger.info(`✅ Updated batch ${batchNumber}: ${result.modifiedCount} documents (${processedCount}/${totalCount} processed)`);
+        } catch (error) {
+          errorCount += batch.length;
+          processedCount += batch.length;
+          logger.error(`❌ Error updating batch ${batchNumber}:`, error);
+        }
+        // Clear batch for next iteration
+        batch = [];
+      }
+    }
+
+    // Process remaining documents in the last batch
+    if (batch.length > 0) {
+      batchNumber++;
       try {
-        const result = await TokenPriceHistory.bulkWrite(bulkOps);
+        const result = await TokenPriceHistory.bulkWrite(batch);
         updatedCount += result.modifiedCount;
-        logger.info(`✅ Updated batch ${Math.floor(i / batchSize) + 1}: ${result.modifiedCount} documents`);
+        processedCount += batch.length;
+        logger.info(`✅ Updated batch ${batchNumber}: ${result.modifiedCount} documents (${processedCount}/${totalCount} processed)`);
       } catch (error) {
         errorCount += batch.length;
-        logger.error(`❌ Error updating batch ${Math.floor(i / batchSize) + 1}:`, error);
+        processedCount += batch.length;
+        logger.error(`❌ Error updating batch ${batchNumber}:`, error);
       }
     }
 

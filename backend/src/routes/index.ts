@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { getPriceHistoryBySlug, getLatestPriceBySlug, getAllSlugs } from '../controllers/priceHistoryController';
-import { calculateTotalProfit, calculateTotalProfit2 } from '../controllers/strategyController';
+import { calculateTotalProfit, calculateTotalProfit2, calculateTotalProfit3 } from '../controllers/strategyController';
 
 const router = Router();
 
@@ -20,6 +20,7 @@ router.get('/price-history/:slug/latest', getLatestPriceBySlug);
 // Strategy calculation routes
 router.get('/strategy/total-profit', calculateTotalProfit);
 router.get('/strategy/total-profit-2', calculateTotalProfit2);
+router.get('/strategy/total-profit-3', calculateTotalProfit3);
 
 export default router;
 

@@ -4,13 +4,16 @@ import PriceChart from './components/PriceChart'
 import StrategySelector from './components/StrategySelector'
 import Strategy1Results from './components/Strategy1Results'
 import Strategy2Results from './components/Strategy2Results'
+import Strategy3Results from './components/Strategy3Results'
 import TotalProfitCalculator from './components/TotalProfitCalculator'
 import TotalProfitCalculator2 from './components/TotalProfitCalculator2'
+import TotalProfitCalculator3 from './components/TotalProfitCalculator3'
 import CoinSymbolSelector, { CoinSymbol } from './components/CoinSymbolSelector'
 import MarketIntervalSelector, { MarketInterval } from './components/MarketIntervalSelector'
 import { fetchAllSlugs, fetchPriceHistory, SlugWithOutcome } from './services/api'
 import { calculateGridHedgeStrategy, StrategyResult as Strategy1Result } from './utils/strategyCalculator1'
 import { calculatePrePurchasedSellStrategy, StrategyResult as Strategy2Result } from './utils/strategyCalculator2'
+import { calculateNewHedgeStrategy, StrategyResult as Strategy3Result } from './utils/strategyCalculater3'
 import './App.css'
 
 interface PriceData {
@@ -44,11 +47,18 @@ function App() {
   const [targetTotal, setTargetTotal] = useState<number>(105)
   const [sellThreshold, setSellThreshold] = useState<number>(65)
   
+  // Strategy 3 calculation parameters
+  const [priceDiff, setPriceDiff] = useState<number>(100)
+  const [timeTillEnd, setTimeTillEnd] = useState<number>(300)
+  const [targetPrice, setTargetPrice] = useState<number>(50)
+  const [maxTotalCent, setMaxTotalCent] = useState<number>(100)
+  
   // Selected strategy
-  const [selectedStrategy, setSelectedStrategy] = useState<'strategy1' | 'strategy2'>('strategy1')
+  const [selectedStrategy, setSelectedStrategy] = useState<'strategy1' | 'strategy2' | 'strategy3'>('strategy1')
   
   const [strategyResult, setStrategyResult] = useState<Strategy1Result | null>(null)
   const [strategy2Result, setStrategy2Result] = useState<Strategy2Result | null>(null)
+  const [strategy3Result, setStrategy3Result] = useState<Strategy3Result | null>(null)
 
   // Calculate strategy 1 results
   useEffect(() => {
@@ -59,6 +69,12 @@ function App() {
   useEffect(() => {
     setStrategy2Result(calculatePrePurchasedSellStrategy(priceData, targetTotal, sellThreshold, orderSize))
   }, [priceData, targetTotal, sellThreshold, orderSize])
+
+  // Calculate strategy 3 results
+  useEffect(() => {
+    const eventType = selectedInterval === 'hourly' ? 'hourly' : '15min'
+    setStrategy3Result(calculateNewHedgeStrategy(priceData, priceDiff, timeTillEnd, targetPrice, maxTotalCent, orderSize, eventType))
+  }, [priceData, priceDiff, timeTillEnd, targetPrice, maxTotalCent, orderSize, selectedInterval])
 
   useEffect(() => {
     loadSlugs()
@@ -171,6 +187,25 @@ function App() {
             />
           )}
 
+          {selectedStrategy === 'strategy3' && (
+            <TotalProfitCalculator3
+              priceDiff={priceDiff}
+              timeTillEnd={timeTillEnd}
+              targetPrice={targetPrice}
+              maxTotalCent={maxTotalCent}
+              orderSize={orderSize}
+              count={count}
+              selectedCoin={selectedCoin}
+              selectedInterval={selectedInterval}
+              onPriceDiffChange={setPriceDiff}
+              onTimeTillEndChange={setTimeTillEnd}
+              onTargetPriceChange={setTargetPrice}
+              onMaxTotalCentChange={setMaxTotalCent}
+              onOrderSizeChange={setOrderSize}
+              onCountChange={setCount}
+            />
+          )}
+
           {selectedSlug && (
             <div className="chart-container">
               {loading ? (
@@ -201,6 +236,22 @@ function App() {
                       orderSize={orderSize}
                       onTargetTotalChange={setTargetTotal}
                       onSellThresholdChange={setSellThreshold}
+                      onOrderSizeChange={setOrderSize}
+                    />
+                  )}
+
+                  {selectedStrategy === 'strategy3' && strategy3Result && (
+                    <Strategy3Results
+                      strategyResult={strategy3Result}
+                      priceDiff={priceDiff}
+                      timeTillEnd={timeTillEnd}
+                      targetPrice={targetPrice}
+                      maxTotalCent={maxTotalCent}
+                      orderSize={orderSize}
+                      onPriceDiffChange={setPriceDiff}
+                      onTimeTillEndChange={setTimeTillEnd}
+                      onTargetPriceChange={setTargetPrice}
+                      onMaxTotalCentChange={setMaxTotalCent}
                       onOrderSizeChange={setOrderSize}
                     />
                   )}

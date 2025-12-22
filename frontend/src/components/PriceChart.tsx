@@ -1,4 +1,4 @@
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, TooltipProps } from 'recharts'
 import './PriceChart.css'
 
 interface PriceData {
@@ -15,6 +15,35 @@ interface PriceChartProps {
   slug: string
 }
 
+// Custom Tooltip component to display coin price bias
+const CustomTooltip = ({ active, payload, label }: TooltipProps<number, string>) => {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload
+    return (
+      <div className="custom-tooltip" style={{
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        border: '1px solid #ccc',
+        borderRadius: '8px',
+        padding: '10px',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+      }}>
+        <p style={{ margin: '0 0 8px 0', fontWeight: 'bold' }}>{`Time: ${label}`}</p>
+        {payload.map((entry, index) => (
+          <p key={index} style={{ margin: '4px 0', color: entry.color }}>
+            {`${entry.name}: ${entry.value?.toFixed(4)}`}
+          </p>
+        ))}
+        {data.coinPriceBias !== undefined && data.coinPriceBias !== null && (
+          <p style={{ margin: '4px 0', color: '#6366f1', fontWeight: '500' }}>
+            {`Coin Price Bias: ${data.coinPriceBias > 0 ? '+' : ''}${data.coinPriceBias.toFixed(2)}`}
+          </p>
+        )}
+      </div>
+    )
+  }
+  return null
+}
+
 const PriceChart = ({ data, slug }: PriceChartProps) => {
   // Format data for chart
   const chartData = data.map((item) => ({
@@ -22,6 +51,7 @@ const PriceChart = ({ data, slug }: PriceChartProps) => {
     timestamp: item.timestamp,
     upTokenPrice: item.upTokenPrice,
     downTokenPrice: item.downTokenPrice,
+    coinPriceBias: item.coinPriceBias,
   }))
 
   return (
@@ -64,15 +94,7 @@ const PriceChart = ({ data, slug }: PriceChartProps) => {
               interval={0}
               allowDecimals={true}
             />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                border: '1px solid #ccc',
-                borderRadius: '8px',
-              }}
-              formatter={(value: number) => value.toFixed(4)}
-              labelFormatter={(label) => `Time: ${label}`}
-            />
+            <Tooltip content={<CustomTooltip />} />
             <Legend />
             <Line
               type="monotone"

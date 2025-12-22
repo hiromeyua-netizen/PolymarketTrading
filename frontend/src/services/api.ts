@@ -165,3 +165,58 @@ export const fetchTotalProfit2 = async (
   return response.data
 }
 
+export interface TotalProfit3Response {
+  totalProfit: number
+  totalCost: number
+  totalFinalValue: number
+  totalEntries: number
+  totalHedgesFilled: number
+  totalSlugCount: number
+  processedSlugCount: number
+  actualProcessedCount: number
+  parameters: {
+    priceDiff: number
+    timeTillEnd: number
+    targetPrice: number
+    maxTotalCent: number
+    orderSize: number
+    token: string | null
+    eventType: string | null
+    count: number | null
+  }
+  results: Array<{
+    slug: string
+    profit: number
+    cost: number
+    finalValue: number
+    entries: number
+    hedgesFilled: number
+  }>
+}
+
+export const fetchTotalProfit3 = async (
+  priceDiff: number,
+  timeTillEnd: number,
+  targetPrice: number,
+  maxTotalCent: number,
+  orderSize: number,
+  count?: number,
+  token?: string,
+  eventType?: string
+): Promise<TotalProfit3Response> => {
+  const params = new URLSearchParams()
+  params.append('priceDiff', priceDiff.toString())
+  params.append('timeTillEnd', timeTillEnd.toString())
+  params.append('targetPrice', targetPrice.toString())
+  params.append('maxTotalCent', maxTotalCent.toString())
+  params.append('orderSize', orderSize.toString())
+  if (token) params.append('token', token)
+  if (eventType) params.append('eventType', eventType)
+  if (count !== undefined) {
+    params.append('count', count.toString())
+  }
+
+  const response = await axios.get<TotalProfit3Response>(`${API_BASE_URL}/strategy/total-profit-3?${params.toString()}`)
+  return response.data
+}
+

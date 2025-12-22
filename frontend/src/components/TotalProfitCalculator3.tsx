@@ -108,7 +108,7 @@ export default function TotalProfitCalculator3({
             min="50"
             max="200"
             value={maxTotalCent}
-            onChange={(e) => onMaxTotalCentChange(parseInt(e.target.value) || 100)}
+            onChange={(e) => onMaxTotalCentChange(parseInt(e.target.value) || 97)}
           />
         </label>
         <label>

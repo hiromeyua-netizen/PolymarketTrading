@@ -466,7 +466,7 @@ export const calculateTotalProfit3 = async (req: Request, res: Response): Promis
       : 50;
     const maxTotalCent = req.query.maxTotalCent 
       ? parseInt(req.query.maxTotalCent as string, 10) 
-      : 100;
+      : 97;
     const orderSize = req.query.orderSize 
       ? parseFloat(req.query.orderSize as string) 
       : 1;

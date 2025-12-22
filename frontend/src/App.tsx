@@ -51,7 +51,7 @@ function App() {
   const [priceDiff, setPriceDiff] = useState<number>(100)
   const [timeTillEnd, setTimeTillEnd] = useState<number>(300)
   const [targetPrice, setTargetPrice] = useState<number>(50)
-  const [maxTotalCent, setMaxTotalCent] = useState<number>(100)
+  const [maxTotalCent, setMaxTotalCent] = useState<number>(97)
   
   // Selected strategy
   const [selectedStrategy, setSelectedStrategy] = useState<'strategy1' | 'strategy2' | 'strategy3'>('strategy1')

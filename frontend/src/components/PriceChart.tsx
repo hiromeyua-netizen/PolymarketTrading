@@ -54,6 +54,8 @@ const PriceChart = ({ data, slug }: PriceChartProps) => {
     coinPriceBias: item.coinPriceBias,
   }))
 
+  console.log(chartData)
+
   return (
     <div className="price-chart">
       <div className="chart-header">

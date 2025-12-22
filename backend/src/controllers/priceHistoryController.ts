@@ -58,6 +58,7 @@ export const getPriceHistoryBySlug = async (req: Request, res: Response): Promis
         timestamp: item.timestamp,
         upTokenPrice: item.upTokenPrice,
         downTokenPrice: item.downTokenPrice,
+        coinPriceBias: item.coinPriceBias,
       })),
     });
   } catch (error) {
@@ -92,6 +93,7 @@ export const getLatestPriceBySlug = async (req: Request, res: Response): Promise
       timestamp: latestPrice.timestamp,
       upTokenPrice: latestPrice.upTokenPrice,
       downTokenPrice: latestPrice.downTokenPrice,
+      coinPriceBias: latestPrice.coinPriceBias,
     });
   } catch (error) {
     logger.error('Error fetching latest price:', error);

@@ -119,11 +119,11 @@ export function calculateNewHedgeStrategy(
       continue
     }
 
-    // Determine losing side based on coinPriceBias
-    // Negative coinPriceBias means coin price went down -> DOWN is losing
-    // Positive coinPriceBias means coin price went up -> UP is losing
-    const losingSide: 'up' | 'down' = data.coinPriceBias < 0 ? 'down' : 'up'
-    const winningSide: 'up' | 'down' = data.coinPriceBias < 0 ? 'up' : 'down'
+    // Determine losing side based on token prices
+    // Lower price token = losing side (less likely to win)
+    // Higher price token = winning side (more likely to win)
+    const losingSide: 'up' | 'down' = data.upTokenPrice <= data.downTokenPrice ? 'up' : 'down'
+    const winningSide: 'up' | 'down' = data.upTokenPrice <= data.downTokenPrice ? 'down' : 'up'
     
     // Get losing side price in cents
     const losingSidePriceCents = losingSide === 'up' 

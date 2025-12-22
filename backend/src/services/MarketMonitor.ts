@@ -244,7 +244,6 @@ export class MarketMonitor extends EventEmitter {
             this.currentCoinPrice = price;
             if (this.startCoinPrice) {
                 const coinPriceBias = this.currentCoinPrice.price - this.startCoinPrice.price;
-                logger.info(`Coin price bias: ${coinPriceBias}`);
                 this.emit(MarketMonitorEvent.COIN_PRICE_BIAS_CHANGE, coinPriceBias);
             }
         });

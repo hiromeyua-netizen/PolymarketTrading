@@ -21,16 +21,16 @@ const startServer = async () => {
 
     const tradingBot1 = new TradingBot(CoinSymbol.BTC, MarketInterval.FIFTEEN_MINUTES);
     await tradingBot1.start();
-    const tradingBot2 = new TradingBot(CoinSymbol.ETH, MarketInterval.FIFTEEN_MINUTES);
-    await tradingBot2.start();
-    const tradingBot3 = new TradingBot(CoinSymbol.SOL, MarketInterval.FIFTEEN_MINUTES);
-    await tradingBot3.start();
-    const tradingBot4 = new TradingBot(CoinSymbol.BTC, MarketInterval.HOURLY);
-    await tradingBot4.start();
-    const tradingBot5 = new TradingBot(CoinSymbol.ETH, MarketInterval.HOURLY);
-    await tradingBot5.start();
-    const tradingBot6 = new TradingBot(CoinSymbol.SOL, MarketInterval.HOURLY);
-    await tradingBot6.start();
+    // const tradingBot2 = new TradingBot(CoinSymbol.ETH, MarketInterval.FIFTEEN_MINUTES);
+    // await tradingBot2.start();
+    // const tradingBot3 = new TradingBot(CoinSymbol.SOL, MarketInterval.FIFTEEN_MINUTES);
+    // await tradingBot3.start();
+    // const tradingBot4 = new TradingBot(CoinSymbol.BTC, MarketInterval.HOURLY);
+    // await tradingBot4.start();
+    // const tradingBot5 = new TradingBot(CoinSymbol.ETH, MarketInterval.HOURLY);
+    // await tradingBot5.start();
+    // const tradingBot6 = new TradingBot(CoinSymbol.SOL, MarketInterval.HOURLY);
+    // await tradingBot6.start();
 
   // Graceful shutdown
   process.on('SIGTERM', async () => {

@@ -32,6 +32,7 @@ export class TradingBot {
     private currentSlug: string | null = null;
     private coinSymbol: CoinSymbol;
     private marketInterval: MarketInterval;
+    private currentCoinPriceBias: number | null = null;
 
     constructor(symbol: CoinSymbol, marketInterval: MarketInterval) {
         this.coinSymbol = symbol;
@@ -62,6 +63,7 @@ export class TradingBot {
             this.handlePriceChange(priceChange);
         });
         this.marketMonitor.on(MarketMonitorEvent.COIN_PRICE_BIAS_CHANGE, (coinPriceBias: number) => {
+            this.currentCoinPriceBias = coinPriceBias;
             this.handleCoinPriceBiasChange(coinPriceBias);
         });
         this.marketMonitor.on(MarketMonitorEvent.MARKET_UPDATED, (marketInfo: MarketInfo | null) => {
@@ -216,6 +218,7 @@ export class TradingBot {
                 timestamp: timestamp,
                 upTokenPrice: priceChange.yesPrice.bestAsk,
                 downTokenPrice: priceChange.noPrice.bestAsk,
+                coinPriceBias: this.currentCoinPriceBias ?? undefined,
             };
 
             // Save to Redis (both with timestamp and as latest)
@@ -258,16 +261,30 @@ export class TradingBot {
                     const eventType = this.marketInterval === MarketInterval.HOURLY ? 'hourly' : '15min';
                     
                     // Batch save to MongoDB
-                    // Determine outcome for each record based on which token price is higher at that timestamp
-                    const documents = tokenPrices.map(price => ({
-                        slug: price.slug,
-                        timestamp: new Date(price.timestamp),
-                        upTokenPrice: price.upTokenPrice,
-                        downTokenPrice: price.downTokenPrice,
-                        token: tokenSymbol,
-                        eventType: eventType,
-                        outcome: price.upTokenPrice > price.downTokenPrice ? 'UP' : 'DOWN' as 'UP' | 'DOWN',
-                    }));
+                    // Determine outcome for each record:
+                    // - If coinPriceBias exists, use it (positive = UP, negative = DOWN)
+                    // - Otherwise, fall back to comparing token prices
+                    const documents = tokenPrices.map(price => {
+                        let outcome: 'UP' | 'DOWN';
+                        if (price.coinPriceBias !== undefined && price.coinPriceBias !== null) {
+                            // Use coinPriceBias: positive means coin price went up (UP), negative means down (DOWN)
+                            outcome = price.coinPriceBias > 0 ? 'UP' : 'DOWN';
+                        } else {
+                            // Fall back to comparing token prices
+                            outcome = price.upTokenPrice > price.downTokenPrice ? 'UP' : 'DOWN';
+                        }
+                        
+                        return {
+                            slug: price.slug,
+                            timestamp: new Date(price.timestamp),
+                            upTokenPrice: price.upTokenPrice,
+                            downTokenPrice: price.downTokenPrice,
+                            token: tokenSymbol,
+                            eventType: eventType,
+                            outcome: outcome,
+                            coinPriceBias: price.coinPriceBias,
+                        };
+                    });
 
                     await TokenPriceHistory.insertMany(documents);
                     logger.info(`✅ Successfully saved ${documents.length} token prices to MongoDB`);

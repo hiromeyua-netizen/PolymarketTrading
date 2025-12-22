@@ -6,6 +6,7 @@ export interface TokenPrice {
     timestamp: number;
     upTokenPrice: number; // bestAskPrice for YES/UP token
     downTokenPrice: number; // bestAskPrice for NO/DOWN token
+    coinPriceBias?: number; // Difference between current coin price and start coin price
 }
 
 export class RedisService {
@@ -106,6 +107,7 @@ export class RedisService {
                 timestamp: price.timestamp,
                 upTokenPrice: price.upTokenPrice,
                 downTokenPrice: price.downTokenPrice,
+                coinPriceBias: price.coinPriceBias,
             });
 
             await this.client!.set(key, value);
@@ -129,6 +131,7 @@ export class RedisService {
                 timestamp: price.timestamp,
                 upTokenPrice: price.upTokenPrice,
                 downTokenPrice: price.downTokenPrice,
+                coinPriceBias: price.coinPriceBias,
             });
 
             await this.client!.set(key, value);

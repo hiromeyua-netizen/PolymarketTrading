@@ -244,6 +244,7 @@ export class MarketMonitor extends EventEmitter {
             this.currentCoinPrice = price;
             if (this.startCoinPrice) {
                 const coinPriceBias = this.currentCoinPrice.price - this.startCoinPrice.price;
+                logger.info(`Coin price bias: ${coinPriceBias}`);
                 this.emit(MarketMonitorEvent.COIN_PRICE_BIAS_CHANGE, coinPriceBias);
             }
         });
@@ -411,12 +412,7 @@ export class MarketMonitor extends EventEmitter {
             return coinPrice;
 
         } catch (error) {
-            if (axios.isAxiosError(error)) {
-                logger.error(`❌ Failed to fetch start coin price: ${error.response?.status} ${error.response?.statusText}`);
-                logger.error(`   Error message: ${error.message}`);
-            } else {
-                logger.error(`❌ Error fetching start coin price: ${error}`);
-            }
+            logger.error(`❌ Error fetching start coin price: ${error}`);
             return null;
         }
     }

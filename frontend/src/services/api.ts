@@ -19,6 +19,7 @@ export interface PriceData {
   upTokenPrice: number
   downTokenPrice: number
   createdAt: string
+  coinPriceBias?: number
 }
 
 export interface PriceHistoryResponse {

@@ -11,6 +11,7 @@ export interface ITokenPriceHistory extends Document {
     token: string; // Coin symbol (e.g., 'BTC', 'ETH', 'SOL', 'XRP')
     eventType: EventType; // 'hourly' or '15min'
     outcome: Outcome; // 'UP' or 'DOWN'
+    coinPriceBias?: number; // Difference between current coin price and start coin price
 }
 
 const TokenPriceHistorySchema: Schema = new Schema({
@@ -48,6 +49,11 @@ const TokenPriceHistorySchema: Schema = new Schema({
         required: true,
         enum: ['UP', 'DOWN'],
         index: true,
+    },
+    coinPriceBias: {
+        type: Number,
+        required: false,
+        index: false,
     },
 }, {
     timestamps: true, // Adds createdAt and updatedAt fields

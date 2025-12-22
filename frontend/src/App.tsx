@@ -19,6 +19,7 @@ interface PriceData {
   upTokenPrice: number
   downTokenPrice: number
   createdAt: string
+  coinPriceBias?: number
 }
 
 function App() {

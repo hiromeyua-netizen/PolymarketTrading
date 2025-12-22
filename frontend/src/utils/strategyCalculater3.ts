@@ -146,7 +146,7 @@ export function calculateNewHedgeStrategy(
         timestamp: data.timestamp,
         size: orderSize,
         tokenType: losingSide,
-        isFilled: false
+        isFilled: true
       }
       totalCost += order.price * order.size
       totalEntries++

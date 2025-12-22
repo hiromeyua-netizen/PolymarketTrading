@@ -12,6 +12,7 @@ export interface Order {
   timestamp: string
   size: number
   tokenType: 'up' | 'down'
+  isFilled: boolean
 }
 
 export interface StrategyResult {
@@ -102,6 +103,8 @@ export function calculateNewHedgeStrategy(
         totalCost += hedgeOrder.price * hedgeOrder.size
         totalHedgesFilled++
         hedgeFilled = true
+        hedgeOrder.timestamp = data.timestamp
+        hedgeOrder.isFilled = true
       }
 
       // Once we've checked hedge fill, move to next data point
@@ -142,7 +145,8 @@ export function calculateNewHedgeStrategy(
         price: losingSidePriceCents,
         timestamp: data.timestamp,
         size: orderSize,
-        tokenType: losingSide
+        tokenType: losingSide,
+        isFilled: false
       }
       totalCost += order.price * order.size
       totalEntries++
@@ -153,7 +157,8 @@ export function calculateNewHedgeStrategy(
         price: hedgePriceCents,
         timestamp: data.timestamp, // initial placement time; fill time may be updated later
         size: orderSize,
-        tokenType: winningSide
+        tokenType: winningSide,
+        isFilled: false
       }
 
       // Mark as entered

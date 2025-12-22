@@ -128,6 +128,9 @@ export default function Strategy3Results({
                       <span><strong>Price:</strong> {strategyResult.order.price.toFixed(0)}c</span>
                       <span><strong>Size:</strong> {strategyResult.order.size}</span>
                       <span><strong>Time:</strong> {new Date(strategyResult.order.timestamp).toLocaleString()}</span>
+                      <span className={strategyResult.order.isFilled ? 'filled' : 'pending'}>
+                        <strong>Status:</strong> {strategyResult.order.isFilled ? 'Filled' : 'Pending'}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -147,6 +150,9 @@ export default function Strategy3Results({
                       <span><strong>Price:</strong> {strategyResult.hedgeOrder.price.toFixed(0)}c</span>
                       <span><strong>Size:</strong> {strategyResult.hedgeOrder.size}</span>
                       <span><strong>Time:</strong> {new Date(strategyResult.hedgeOrder.timestamp).toLocaleString()}</span>
+                      <span className={strategyResult.hedgeOrder.isFilled ? 'filled' : 'pending'}>
+                        <strong>Status:</strong> {strategyResult.hedgeOrder.isFilled ? 'Filled' : 'Pending'}
+                      </span>
                     </div>
                   </div>
                 </div>
